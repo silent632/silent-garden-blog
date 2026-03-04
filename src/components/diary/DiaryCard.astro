@@ -1,0 +1,178 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import { cn } from 'astro-pure/utils'
+import { Button, Icon } from 'astro-pure/user'
+import { formatTag, processTags } from '@/utils/formatTag'
+
+interface Props {
+  post: CollectionEntry<'diary'>
+  simple?: boolean
+  borderless?: boolean
+  class?: string
+}
+
+const { post, simple = false, borderless = false, class: className } = Astro.props
+const { id, data, body } = post
+
+const removeMarkdownFormatting = (text: string): string => {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/(^|\n)(#+)\s+/g, '$1')
+    .replace(/(^|\n)>\s+/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/==([^=]+)==/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/\n+/g, '\n')
+    .trim()
+}
+
+const truncate = (text: string, max: number): string => {
+  if (!text) return ''
+  const clean = removeMarkdownFormatting(text)
+  if (clean.length <= max) return clean.replace(/\n/g, '<br>')
+  return clean.substring(0, max).trim().replace(/\n/g, '<br>') + '...'
+}
+
+const excerpt = body ? truncate(body, simple ? 120 : 220) : ''
+const postDate = new Date(data.publishDate)
+const postTitle = data.title || 'Untitled Diary'
+const moodText = data.mood || 'Daily note'
+
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+---
+
+<li
+  class={cn(
+    'diary-preview group/card relative flex flex-col rounded-2xl border px-5 py-3 transition-colors duration-200 ease-out',
+    simple && 'max-sm:px-4 sm:py-4',
+    borderless && 'diary-preview-borderless',
+    className
+  )}
+>
+  <a
+    class='group/link w-full flex flex-col transition-all hover:text-primary focus-visible:outline-none'
+    href={`/diary/${id}`}
+    data-astro-prefetch
+  >
+    <div class={cn('mb-0.5 flex items-center gap-2 py-0.5 text-xs text-muted-foreground', !simple && 'text-sm')}>
+      <span class='inline-flex items-center gap-1'>
+        <Icon name='calendar' class='size-3.5' />
+        {formatDate(postDate)}
+      </span>
+      <span class='inline-flex items-center gap-1'>
+        <Icon name='sun' class='size-3.5' />
+        {moodText}
+      </span>
+    </div>
+
+    <div class='mb-0.5 flex justify-between gap-3'>
+      <div class={cn('text-lg leading-[1.45]', !simple && 'text-xl leading-[1.5]')}>
+        <strong>{postTitle}</strong>
+      </div>
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        width='16'
+        height='16'
+        viewBox='0 0 24 24'
+        fill='none'
+        stroke-width='2.5'
+        stroke-linecap='round'
+        stroke-linejoin='round'
+        class='preview-redirect my-1 stroke-muted-foreground group-hover/link:stroke-primary'
+      >
+        <line
+          x1='5'
+          y1='12'
+          x2='19'
+          y2='12'
+          class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1 group-hover/link:scale-x-100'
+        ></line>
+        <polyline
+          points='12 5 19 12 12 19'
+          class='translate-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1'
+        ></polyline>
+      </svg>
+    </div>
+
+    {excerpt && (
+      <div
+        class={cn(
+          'line-clamp-2 pt-0.5 text-[0.98rem] text-muted-foreground sm:line-clamp-3',
+          !simple && 'text-[1.03rem] leading-8'
+        )}
+        set:html={excerpt}
+      />
+    )}
+  </a>
+
+  {!simple && data.tags.length > 0 && (
+    <ul class='mt-3 flex flex-wrap gap-2'>
+      {processTags(data.tags).map((tag: string) => (
+        <li>
+          <Button title={tag} href={`/tags/${formatTag(tag)}`} style='pill' size='sm'>
+            {formatTag(tag)}
+          </Button>
+        </li>
+      ))}
+    </ul>
+  )}
+</li>
+
+<style>
+  .diary-preview {
+    border-color: hsl(var(--border) / 0.9);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.84),
+      hsl(var(--youth-accent) / 0.05)
+    );
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.035);
+  }
+
+  .diary-preview:hover {
+    border-color: hsl(var(--primary) / 0.26);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.055);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.9),
+      hsl(var(--youth-accent) / 0.09)
+    );
+  }
+
+  .diary-preview:hover > a {
+    color: hsl(var(--primary) / var(--un-text-opacity, 1));
+  }
+
+  .diary-preview:hover > a .preview-redirect {
+    stroke: hsl(var(--primary) / var(--un-text-opacity, 1));
+  }
+
+  .diary-preview:focus-within {
+    border-color: hsl(var(--primary) / var(--un-border-opacity, 1));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  .diary-preview-borderless {
+    border-color: transparent;
+  }
+
+  .diary-preview-borderless:hover {
+    border-color: transparent;
+  }
+
+  .diary-preview-borderless:focus-within {
+    border-color: transparent;
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.16);
+  }
+</style>

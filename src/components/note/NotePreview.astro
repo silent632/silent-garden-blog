@@ -1,0 +1,317 @@
+---
+import { Image } from 'astro:assets'
+import { type CollectionEntry, type CollectionKey } from 'astro:content'
+import type { HTMLTag, Polymorphic } from 'astro/types'
+
+import { cn } from 'astro-pure/utils'
+import { Button, FormattedDate, Icon } from 'astro-pure/user'
+import { processTags } from '@/utils/formatTag'
+
+type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> & {
+  post: CollectionEntry<CollectionKey>
+  detailed?: boolean
+  class?: string
+  card?: boolean
+  excerptLength?: number
+}
+
+const { as: Tag = 'div', post, detailed = false, class: className, card = false, excerptLength = 150 } = Astro.props
+  
+  // 当excerptLength为0时，表示只显示标题
+  const showOnlyTitle = excerptLength === 0;
+
+const { id, data } = post
+
+// 从id中提取文件名（不包含路径和扩展名）
+const getFileNameFromId = (id: string): string => {
+  const parts = id.split('/');
+  const fileNameWithExt = parts[parts.length - 1];
+  const fileNameWithoutExt = fileNameWithExt.split('.')[0];
+  return fileNameWithoutExt;
+};
+
+const fileName = getFileNameFromId(id);
+
+// 辅助函数：移除Markdown格式符号但保留换行和列表结构
+const removeMarkdownFormatting = (text: string): string => {
+  // 保留换行符，但移除其他多余的空白
+  const preserveNewlines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // 移除Markdown格式符号
+  let cleanText = preserveNewlines
+    // 移除标题：#、##、###等
+    .replace(/(^|\n)(#+)\s+/g, '$1')
+    // 移除引用：>
+    .replace(/(^|\n)>\s+/g, '$1')
+    // 移除粗体和斜体：**粗体** 和 *斜体*
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    // 移除高亮：==高亮文本==
+    .replace(/==([^=]+)==/g, '$1')
+    // 移除标准markdown链接：[文件标题](链接)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // 移除链接：[[链接]]
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    // 移除HTML标签
+    .replace(/<[^>]*>/g, '')
+    // 处理无序列表，在列表项前添加换行（如果前面不是换行）
+    .replace(/(^|\n)([-+*])\s+/g, '$1$2 ') // 保留列表标记但移除多余空格
+    // 将多个连续的换行符转换为单个换行符
+    .replace(/\n+/g, '\n')
+    // 移除多余的空白字符，但保留换行和列表标记后的空格
+    .replace(/(?<!^)(?<!\n)(?<!\n[-+*])[ \t\r]+/g, ' ')
+    .trim();
+  
+  return cleanText;
+};
+
+// 辅助函数：内容截断并保留换行
+const truncateHtmlContent = (content: string, maxLength: number): string => {
+  if (!content) return '';
+  
+  try {
+    // 1. 移除Markdown格式但保留换行
+    const cleanTextWithNewlines = removeMarkdownFormatting(content);
+    
+    // 2. 计算纯文本长度（不考虑换行符）
+    const plainTextLength = cleanTextWithNewlines.replace(/\n/g, '').length;
+    
+    // 如果内容长度不超过最大长度，直接返回清理后的内容
+    if (plainTextLength <= maxLength) {
+      return cleanTextWithNewlines;
+    }
+    
+    // 3. 进行内容截断，同时保留换行结构
+    let truncated = '';
+    let currentLength = 0;
+    let lines = cleanTextWithNewlines.split('\n');
+    
+    for (let i = 0; i < lines.length && currentLength < maxLength; i++) {
+      const line = lines[i];
+      const lineLength = line.replace(/\s+/g, '').length; // 不计算空格
+      
+      if (currentLength + lineLength <= maxLength) {
+        // 整行都可以保留
+        truncated += (i > 0 ? '\n' : '') + line;
+        currentLength += lineLength;
+      } else {
+        // 只保留部分行
+        const remainingLength = maxLength - currentLength;
+        let partialLine = '';
+        let partialLength = 0;
+        
+        // 逐个字符处理，直到达到剩余长度
+        for (let j = 0; j < line.length && partialLength < remainingLength; j++) {
+          const char = line[j];
+          partialLine += char;
+          if (char !== ' ') {
+            partialLength++;
+          }
+        }
+        
+        truncated += (i > 0 ? '\n' : '') + partialLine.trim() + '...';
+        currentLength += remainingLength;
+        break; // 已经达到最大长度，退出循环
+      }
+    }
+    
+    // 将文本中的换行符转换为HTML的<br>标签
+    return truncated.replace(/\n/g, '<br>');
+  } catch (error) {
+    // 如果处理失败，返回简单的纯文本截断结果，同时保留换行
+    const plainText = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    const result = plainText.length > maxLength 
+      ? `${plainText.substring(0, maxLength)}...` 
+      : plainText;
+    // 即使在错误处理中也转换换行符
+    return result.replace(/\n/g, '<br>');
+  }
+}
+
+const remarkPluginFrontmatter = post.rendered?.remarkPluginFrontmatter || {}
+const postDate = data.updated ?? data.publishDate
+
+// 处理卡片内容显示（支持markdown样式）
+let renderedContent = ''
+if (card && post.body && !showOnlyTitle) {
+  // 对于Markdown内容，我们直接使用body并进行截断
+  renderedContent = truncateHtmlContent(post.body, excerptLength)
+}
+---
+
+<li
+  class={cn(
+    'note-preview group/card flex flex-col relative rounded-2xl border border-border bg-background transition-all duration-300 ease-out px-5 py-4',
+    detailed && 'max-sm:px-4 sm:py-5',
+    card && 'h-full flex flex-col justify-between',
+    showOnlyTitle && 'border-0 bg-transparent', // 只显示标题时不显示边框且背景透明
+    className
+  )}
+  style={detailed &&
+    data.heroImage?.color &&
+    `--preview-highlight:color-mix(in srgb,${data.heroImage.color} 40%,hsl(var(--foreground)/var(--un-text-opacity,1)));
+    --preview-highlight-bg:hsl(from ${data.heroImage.color} h s l/20%)`}
+>
+  <a
+    class={cn(
+      'group/link w-full flex flex-col transition-all hover:text-primary',
+      !detailed && 'sm:flex-row',
+      detailed && data.heroImage && 'max-md:pt-24',
+      card && 'h-full flex flex-col justify-between'
+    )}
+    href={`/notes/${id}`}
+    data-astro-prefetch
+  >
+    {detailed && data.heroImage && (
+      <Image
+        alt={data.heroImage.alt || data.title}
+        loading='eager'
+        {...data.heroImage}
+      />
+    )}
+
+    {/* 卡片模式下不显示日期 */}
+    {!card && <FormattedDate class='min-w-[95px] py-1 text-xs' date={postDate} />}
+
+    <Tag class='z-10 flex-grow'>
+      {/* title */}
+      <div class='flex justify-between'>
+        <div class={cn(
+          detailed && 'font-medium',
+          card && 'text-lg font-medium'
+        )}>
+          {data.draft && <span class='text-red-500'>(Draft) </span>}
+          {card ? fileName : data.title}
+        </div>
+        <svg
+          xmlns='http://www.w3.org/2000/svg'
+          width='16'
+          height='16'
+          viewBox='0 0 24 24'
+          fill='none'
+          stroke-width='2.5'
+          stroke-linecap='round'
+          stroke-linejoin='round'
+          class='preview-redirect my-1 stroke-muted-foreground group-hover/link:stroke-primary'
+        >
+          <line
+            x1='5'
+            y1='12'
+            x2='19'
+            y2='12'
+            class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1 group-hover/link:scale-x-100'
+          ></line>
+          <polyline
+            points='12 5 19 12 12 19'
+            class='translate-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1'
+          ></polyline>
+        </svg>
+      </div>
+      {/* desc */}
+      {!showOnlyTitle && (
+        <div
+          class={cn(
+              'pt-2 text-muted-foreground',
+              data.heroImage && 'sm:me-24',
+              card ? 'text-base leading-[1.8] tracking-[1px] mb-[1.2em]' : 'text-sm line-clamp-2 sm:line-clamp-2'
+            )}
+        >
+          {card && renderedContent && (
+            <div set:html={renderedContent} />
+          )}
+          {!card && data.description && data.description}
+        </div>
+      )}
+
+      {detailed && !showOnlyTitle && (
+        <div>
+          
+          <div class='flex items-center gap-2 py-1.5 text-sm italic leading-4 text-muted-foreground sm:py-3'>
+            {/* reading time */}
+            {remarkPluginFrontmatter.minutesRead && (
+              <span class='flex items-center gap-1'>
+                <Icon name='time' class='size-4' />
+                {remarkPluginFrontmatter.minutesRead}
+              </span>
+            )}
+            {/* language */}
+            {data.language && (
+              <span class='flex items-center gap-1'>
+                <Icon name='earth' class='size-4' />
+                {data.language}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </Tag>
+  </a>
+  {/* tags */}
+  {(detailed || card) && data.tags && !showOnlyTitle && (
+    <ul class='tag-list mt-2 flex flex-wrap gap-2'>
+      {processTags(data.tags).map((tag: string) => (
+        <li data-key={tag}>
+          <Button title={tag} href={`/tags/${tag}`} style='pill' size='sm' />
+        </li>
+      ))}
+    </ul>
+  )}
+</li>
+
+<style>
+  .note-preview {
+    --preview-highlight-final: var(
+      --preview-highlight,
+      hsl(var(--primary) / var(--un-text-opacity, 1))
+    );
+    border-color: hsl(var(--border) / 0.9);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.84),
+      hsl(var(--youth-accent) / 0.05)
+    );
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.035);
+  }
+  .note-preview:hover {
+    border-color: hsl(var(--primary) / 0.26);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.055);
+    &, & .tag-list a {
+      background-color: var(
+        --preview-highlight-bg,
+        hsl(var(--youth-accent) / 0.09)
+      );
+    }
+    & > a, & .tag-list a:hover {
+      color: var(--preview-highlight-final) !important;
+    }
+    & > a .preview-redirect {
+      stroke: var(--preview-highlight-final) !important;
+    }
+  }
+
+  .note-preview:focus-within {
+    border-color: hsl(var(--primary) / var(--un-border-opacity, 1));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+  .cover-image {
+    mask-image: linear-gradient(to right, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+    -ms-mask-image: -ms-linear-gradient(to right, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+    -webkit-mask-image: -webkit-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) 100%
+    );
+  }
+
+  @media (max-width: 768px) {
+    .cover-image {
+      mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+      -ms-mask-image: -ms-linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+      -webkit-mask-image: -webkit-linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 1) 100%
+      );
+    }
+  }
+</style>

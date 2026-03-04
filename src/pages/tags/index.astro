@@ -1,0 +1,57 @@
+﻿---
+import { getBlogCollection } from 'astro-pure/server'
+import { Button } from 'astro-pure/user'
+import { cn } from 'astro-pure/utils'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import { processTags } from '@/utils/formatTag'
+
+const allPosts = await getBlogCollection()
+const allNotes = await getBlogCollection('notes')
+const allContent = [...allPosts, ...allNotes]
+
+const allProcessedTags = allContent.flatMap((item) => processTags(item.data.tags || []))
+
+const tagCountMap = new Map<string, number>()
+allProcessedTags.forEach((tag) => {
+  tagCountMap.set(tag, (tagCountMap.get(tag) || 0) + 1)
+})
+
+const allTags = Array.from(tagCountMap.entries()).sort((a, b) => b[1] - a[1])
+
+const meta = {
+  description: 'Tag overview for blog posts and notes',
+  title: 'Tags'
+}
+---
+
+<PageLayout {meta}>
+  <Button title='Back to Blog' href='/blog' style='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <h1 class='mb-6 text-3xl font-medium'>Tags</h1>
+    </div>
+
+    <div id='content' class='animate'>
+      {
+        allTags.length > 0 ? (
+          <ul class='flex flex-wrap gap-4'>
+            {allTags.map(([tag, val]) => (
+              <li>
+                <Button
+                  href={`/tags/${tag}`}
+                  style='pill'
+                  class={cn('items-start gap-x-1', val > 2 ? 'rounded-xl px-3 py-1 text-xl' : val > 1 && 'text-lg')}
+                >
+                  {tag}
+                  <span class={val > 2 ? 'text-base' : 'text-xs'}>{val}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class='ui-empty-state text-muted-foreground'>No tags yet.</div>
+        )
+      }
+    </div>
+  </main>
+</PageLayout>

@@ -1,0 +1,45 @@
+﻿---
+import PageLayout from '@/layouts/CommonPage.astro'
+import ProjectSection from '@/components/projects/ProjectSection.astro'
+import syncedProjects from '../../data/projects/projects.json'
+
+const headings = [
+  { depth: 2, slug: 'my-projects', text: 'Project List' },
+  { depth: 2, slug: 'sponsorship', text: 'Support' }
+]
+
+const projectList = Array.isArray(syncedProjects) ? syncedProjects : []
+---
+
+<PageLayout
+  title='Projects'
+  {headings}
+  info={{
+    slug: '/projects',
+    hideComment: false
+  }}
+>
+  <p>GitHub Activity:</p>
+  <p>
+    <img src='https://ghchart.rshah.org/40814F/silent632' alt='github activities' loading='lazy' />
+  </p>
+  <p>A collection of my projects.</p>
+
+  <h2 id='my-projects'>Project List</h2>
+
+  {projectList.length > 0 ? (
+    <ProjectSection projects={projectList} />
+  ) : (
+    <p class='text-muted-foreground'>No projects published yet.</p>
+  )}
+
+  <h2 id='sponsorship'>Support</h2>
+  <p>If you like my content, feel free to support this site.</p>
+  {/* Add your sponsorship QR code
+  <Sponsorship
+    methods={[
+      { name: 'WeChat', icon: 'wechat-pay', image: wechat },
+    ]}
+  />
+  */}
+</PageLayout>

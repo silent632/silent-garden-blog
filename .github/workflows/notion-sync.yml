@@ -1,0 +1,54 @@
+name: Notion Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every 6 hours (UTC)
+    - cron: "15 */6 * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: notion-sync
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Sync Notion Content
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_PROJECTS_DATABASE_ID: ${{ secrets.NOTION_PROJECTS_DATABASE_ID }}
+          NOTION_DIARY_DATABASE_ID: ${{ secrets.NOTION_DIARY_DATABASE_ID }}
+        run: |
+          npm run sync:notion:books
+          npm run sync:notion:projects
+          npm run sync:notion:diary -- --clean
+
+      - name: Commit and Push Changes
+        run: |
+          git config user.name "sync-bot"
+          git config user.email "sync-bot@users.noreply.github.com"
+          git add src/data/books src/data/projects src/content/diary
+          if git diff --cached --quiet; then
+            echo "No content changes."
+            exit 0
+          fi
+          git commit -m "chore(sync): update notion content"
+          git push

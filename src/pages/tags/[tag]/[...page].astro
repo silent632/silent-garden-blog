@@ -1,0 +1,124 @@
+﻿---
+import type { GetStaticPaths, Page } from 'astro'
+import type { CollectionEntry } from 'astro:content'
+
+import PostPreview from '@/components/post/PostPreview.astro'
+import NotePreview from '@/components/note/NotePreview.astro'
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import config from '@/site-config'
+import { processTags } from '@/utils/formatTag'
+
+export const prerender = true
+
+export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
+  const allPosts = await getBlogCollection()
+  const allPostsByDate = sortMDByDate(allPosts)
+  const allNotes = await getBlogCollection('notes')
+  const allNotesByDate = sortMDByDate(allNotes)
+
+  const allProcessedPostTags = allPostsByDate.flatMap((post) => processTags(post.data.tags || []))
+  const allProcessedNoteTags = allNotesByDate.flatMap((notes) => processTags(notes.data.tags || []))
+  const allProcessedTags = [...allProcessedPostTags, ...allProcessedNoteTags]
+  const uniqueProcessedTags = [...new Set(allProcessedTags)]
+
+  return uniqueProcessedTags.flatMap((tag) => {
+    const hasBlogPosts = allPostsByDate.some((post) => processTags(post.data.tags || []).includes(tag))
+    const hasNotes = allNotesByDate.some((notes) => processTags(notes.data.tags || []).includes(tag))
+
+    if (hasBlogPosts || hasNotes) {
+      const filterPosts = allPostsByDate.filter((post) => processTags(post.data.tags || []).includes(tag))
+
+      return paginate(filterPosts, {
+        pageSize: config.content.blogPageSize,
+        params: { tag }
+      })
+    }
+
+    return []
+  })
+}
+
+const { page } = Astro.props as { page: Page<CollectionEntry<'blog'>> }
+const { tag } = Astro.params as { tag: string }
+
+const allNotes = await getBlogCollection('notes')
+const allNotesByDate = sortMDByDate(allNotes)
+
+const filteredNotes = allNotesByDate.filter((notes) => {
+  if (!notes.data.tags) return false
+  const processedNoteTags = processTags(notes.data.tags)
+  return processedNoteTags.some((processedTag) => processedTag.toLowerCase() === tag.toLowerCase())
+})
+
+const meta = {
+  description: `Content under tag ${tag}`,
+  title: `Tag: ${tag}`
+}
+
+const prevUrl = page.url.prev
+const nextUrl = page.url.next
+---
+
+<PageLayout {meta}>
+  <Button title='Back to Blog' href='/blog' style='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <h1 class='mb-6 flex items-end gap-x-2 text-3xl font-medium'>
+        Tag:
+        <span class='text-2xl'>#{tag}</span>
+      </h1>
+    </div>
+
+    <div class='grid gap-8 lg:grid-cols-3'>
+      <section id='blog-content' class='animate lg:col-span-2' aria-label='Blog post list'>
+        {page.data.length > 0 ? (
+          <>
+            <div class='mb-6 flex flex-col justify-between text-sm sm:flex-row'>
+              <span class='text-muted-foreground'>
+                Page {page.currentPage} · Showing {page.data.length} / {page.total} posts
+              </span>
+            </div>
+            <ul class='flex flex-col gap-y-3 text-start'>
+              {page.data.map((post) => (
+                <PostPreview as='h2' {post} />
+              ))}
+            </ul>
+            {(prevUrl || nextUrl) && (
+              <nav class='ui-page-nav'>
+                {prevUrl && (
+                  <a class='ui-page-nav-link me-auto' data-astro-prefetch href={prevUrl}>
+                    ← Previous
+                  </a>
+                )}
+                {nextUrl && (
+                  <a class='ui-page-nav-link ms-auto' data-astro-prefetch href={nextUrl}>
+                    Next →
+                  </a>
+                )}
+              </nav>
+            )}
+          </>
+        ) : (
+          <div class='ui-empty-state text-muted-foreground'>No blog posts with this tag.</div>
+        )}
+      </section>
+
+      <aside id='notes-sidebar' class='animate' aria-label='Notes with this tag'>
+        <div class='sticky top-24'>
+          <h3 class='mb-4 text-xl font-medium'>Related Notes</h3>
+          {filteredNotes.length > 0 ? (
+            <ul class='space-y-8'>
+              {filteredNotes.map((notes) => (
+                <NotePreview post={notes} card excerptLength={0} class='min-h-[50px]' />
+              ))}
+            </ul>
+          ) : (
+            <div class='ui-empty-state text-sm text-muted-foreground'>No notes with this tag.</div>
+          )}
+        </div>
+      </aside>
+    </div>
+  </main>
+</PageLayout>

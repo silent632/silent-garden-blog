@@ -1,0 +1,141 @@
+---
+import { Footer, Header, ThemeProvider } from 'astro-pure/components/basic'
+import type { SiteMeta } from 'astro-pure/types'
+import BaseHead from '@/components/BaseHead.astro'
+import config from '@/site-config'
+
+// Import the global.css file here so that it is included on
+// all pages through the use of the <BaseLayout /> component.
+import '@/assets/styles/app.css'
+import '@/styles/simple-callout.css'
+
+interface Props {
+  meta: SiteMeta
+  highlightColor?: string
+}
+
+const {
+  meta,
+  highlightColor,
+  ...props
+} = Astro.props
+
+// 安全地获取meta属性，确保类型正确
+const articleDate = meta?.articleDate || ''
+const description = meta?.description || config.description
+const ogImage = meta?.ogImage
+const title = meta?.title
+---
+
+<html lang={config.locale.lang}>
+  <head>
+    <BaseHead {articleDate} {description} {ogImage} {title} />
+    <ThemeProvider />
+  </head>
+
+  <body class='flex justify-center bg-background text-foreground' {...props}>
+    {
+      highlightColor && (
+        <div
+          id='highlight-gradient'
+          class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
+          style={`background-image:linear-gradient(${highlightColor},transparent)`}
+        />
+      )
+    }
+    <div class='w-full max-w-[70rem] px-4 sm:px-7 lg:px-10' data-pagefind-body>
+      <div data-pagefind-ignore>
+        <Header />
+      </div>
+      <slot />
+      <div data-pagefind-ignore>
+        <Footer />
+      </div>
+    </div>
+
+    {/* Set highlight color */}
+    <style define:vars={{ highlightColor }}>
+      :global(.highlight) {
+        color: var(--highlightColor, hsl(var(--primary) / var(--un-text-opacity))) !important;
+      }
+      :global(.highlight-bg) {
+        background-color: var(
+          --highlightColor,
+          hsl(var(--primary) / var(--un-text-opacity))
+        ) !important;
+      }
+    </style>
+
+    <style>
+      :global(header-component #headerExpandContent a[aria-label='Nav menu item']) {
+        border-radius: 0.5rem;
+        color: hsl(var(--foreground) / 0.82);
+        transition:
+          color 180ms ease,
+          background-color 180ms ease;
+      }
+
+      :global(header-component #headerExpandContent a[aria-label='Nav menu item']:hover),
+      :global(header-component #headerExpandContent a[aria-label='Nav menu item']:focus-visible) {
+        color: hsl(var(--primary) / var(--un-text-opacity, 1));
+        background-color: hsl(var(--muted) / 0.45);
+        outline: none;
+      }
+
+      :global(header-component #headerExpandContent a[aria-label='Nav menu item'].nav-link-active) {
+        color: hsl(var(--primary) / var(--un-text-opacity, 1));
+        background-color: hsl(var(--muted) / 0.55);
+        font-weight: 600;
+      }
+
+      :global(header-component a[title='Search']) {
+        border-radius: 0.5rem;
+        transition:
+          color 180ms ease,
+          background-color 180ms ease;
+      }
+
+      :global(header-component a[title='Search']:hover),
+      :global(header-component a[title='Search']:focus-visible) {
+        color: hsl(var(--primary) / var(--un-text-opacity, 1));
+        background-color: hsl(var(--muted) / 0.45);
+        outline: none;
+      }
+    </style>
+
+    <script is:inline>
+      const normalizePath = (input) => {
+        if (!input || input === '/') return '/'
+        return input.replace(/\/+$/, '')
+      }
+
+      const applyHeaderActiveState = () => {
+        const current = normalizePath(window.location.pathname)
+        const links = document.querySelectorAll(
+          "header-component #headerExpandContent a[aria-label='Nav menu item']"
+        )
+
+        links.forEach((link) => {
+          const href = link.getAttribute('href') || ''
+          if (!href.startsWith('/')) return
+          const target = normalizePath(href)
+          const active =
+            target === '/' ? current === '/' : current === target || current.startsWith(`${target}/`)
+
+          link.classList.toggle('nav-link-active', active)
+          if (active) {
+            link.setAttribute('aria-current', 'page')
+          } else {
+            link.removeAttribute('aria-current')
+          }
+        })
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyHeaderActiveState, { once: true })
+      } else {
+        applyHeaderActiveState()
+      }
+    </script>
+  </body>
+</html>

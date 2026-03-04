@@ -1,0 +1,6 @@
+# Cloudflare Pages 配置
+name = "silent-garden"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+# 环境变量从 .dev.vars 加载，不需要在这里定义

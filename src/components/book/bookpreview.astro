@@ -1,0 +1,59 @@
+---
+import { getBookCover, type Book } from '../../utils/getBookCover';
+
+interface Props {
+  book: Book;
+  year: number;
+  index: number;
+}
+
+const { book, year, index } = Astro.props;
+---
+
+<div
+  class='book-preview group relative mx-auto w-full max-w-[9rem] cursor-pointer overflow-hidden rounded-lg transition-all duration-300'
+  title={book.title}
+  data-book-id={index}
+>
+  <div class='book-cover-frame aspect-[2/3] w-full overflow-hidden bg-gray-100'>
+    <img 
+      src={getBookCover(book, year)} 
+      alt={book.title} 
+      class='h-full w-full object-cover transition-transform duration-500 group-hover:scale-110'
+      loading={index < 6 ? 'eager' : 'lazy'}
+      decoding='async'
+    />
+  </div>
+  <div class='absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3'>
+    <p class='text-white text-sm font-medium line-clamp-1 p-1 rounded book-title-mask'>{book.title}</p>
+  </div>
+  <button 
+    class='book-item-btn absolute inset-0'
+    data-dialog-id={index}
+  ></button>
+</div>
+
+<style>
+  .book-preview {
+    border: 1px solid hsl(var(--border) / 0.8);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.84),
+      hsl(var(--youth-accent) / 0.05)
+    );
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+  }
+
+  .book-preview:hover {
+    border-color: hsl(var(--primary) / 0.26);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.055);
+  }
+
+  .book-title-mask {
+    background-color: hsl(var(--foreground) / 0.84);
+  }
+
+  .book-cover-frame {
+    min-height: 0;
+  }
+</style>

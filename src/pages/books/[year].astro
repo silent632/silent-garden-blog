@@ -1,0 +1,114 @@
+﻿---
+import PageLayout from '@/layouts/BaseLayout.astro'
+import BookList from '@/components/book/booklist.astro'
+import { getBooksFromNotion, setNotionEnv, type YearData } from '@/utils/notion'
+import { type Book } from '@/utils/getBookCover'
+import { sortBooksByDate } from '@/utils/sortBooks'
+
+const NOTION_TOKEN = import.meta.env.NOTION_TOKEN
+const NOTION_DATABASE_ID = import.meta.env.NOTION_DATABASE_ID
+
+if (NOTION_TOKEN && NOTION_DATABASE_ID) {
+  setNotionEnv(NOTION_TOKEN, NOTION_DATABASE_ID)
+}
+
+export async function getStaticPaths() {
+  const booksData = await getBooksFromNotion()
+  return booksData.years.map((yearData: YearData) => ({
+    params: { year: yearData.year.toString() }
+  }))
+}
+
+const yearParam = Astro.params.year
+const year = yearParam ? parseInt(yearParam, 10) : 0
+
+let yearBooks: Book[] = []
+let recommendedBooks: Book[] = []
+let previousYears: YearData[] = []
+
+try {
+  const booksData = await getBooksFromNotion()
+
+  previousYears = booksData.years
+
+  if (year > 0) {
+    const yearData = booksData.years.find((item) => item.year === year)
+    if (yearData) {
+      yearBooks = sortBooksByDate(yearData.books)
+      recommendedBooks = yearData.books
+        .filter((book: Book) => book.recommend === true)
+        .slice(0, 10)
+    }
+  }
+} catch (error) {
+  console.error('Error loading books data from Notion:', error)
+}
+---
+
+<PageLayout
+  meta={{ title: `${year} Reading List`, description: `Books read in ${year}` }}
+  highlightColor='#64879A'
+>
+  <main class='flex w-full flex-col items-center py-8'>
+    <div id='content' class='animate text-lg flex flex-col items-center gap-y-10 md:w-4/5 lg:w-5/6'>
+      <div class='text-center mb-10'>
+        <h1 class='text-4xl font-bold mb-4'>📚 {year} Reading List</h1>
+      </div>
+
+      {recommendedBooks.length > 0 && (
+        <BookList books={recommendedBooks} year={year} title='Recommended' startIndex={0} />
+      )}
+
+      {yearBooks.length > 0 ? (
+        <BookList
+          books={yearBooks}
+          year={year}
+          title={`${year} Reading`}
+          startIndex={recommendedBooks.length}
+        />
+      ) : (
+        <div class='ui-empty-state text-center py-6'>
+          <p class='text-lg text-muted-foreground'>No data found for this year.</p>
+        </div>
+      )}
+
+      {yearBooks.length === 0 && recommendedBooks.length === 0 && (
+        <div class='ui-empty-state text-center text-muted-foreground'>
+          <p>No book data yet. Add books in Notion to sync.</p>
+        </div>
+      )}
+
+      <section class='mb-12'>
+        <div class='text-center'>
+          <a href='/books' class='ui-inline-link mx-1'>← Back to This Year</a>
+        </div>
+      </section>
+
+      {previousYears.length > 0 && (
+        <section class='mb-12'>
+          <div class='text-center'>
+            <span class='text-lg font-medium mr-2'>Other Years:</span>
+            {previousYears
+              .filter((y) => y.year !== year)
+              .map((yearData, index, arr) => (
+                <>
+                  <a href={`/books/${yearData.year}`} class='ui-inline-link mx-1'>
+                    {yearData.year}
+                  </a>
+                  {index < arr.length - 1 && <span class='text-muted-foreground'> </span>}
+                </>
+              ))}
+          </div>
+        </section>
+      )}
+    </div>
+  </main>
+</PageLayout>
+
+<script>
+  import { initBookInteractions } from '@/utils/bookInteractions'
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initBookInteractions()
+  })
+</script>

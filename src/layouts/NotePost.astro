@@ -1,0 +1,157 @@
+---
+import type { MarkdownHeading } from 'astro'
+import type { CollectionEntry } from 'astro:content'
+
+// Plugin styles
+import 'katex/dist/katex.min.css'
+
+import { MediumZoom } from 'astro-pure/advanced'
+import { Icon } from 'astro-pure/user'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { integ } from '@/site-config'
+import { processTags } from '@/utils/formatTag'
+
+interface Props {
+  post: CollectionEntry<'notes'>
+  posts: CollectionEntry<'notes'>[]
+  headings: MarkdownHeading[]
+  remarkPluginFrontmatter: Record<string, unknown>
+}
+
+const {
+  post: { id, data }
+} = Astro.props
+
+const {
+  description,
+  heroImage,
+  publishDate,
+  updated,
+  aliases
+} = data
+
+// 从id中提取文件名（不包含路径和扩展名）
+const getFileNameFromId = (id: string): string => {
+  const parts = id.split('/');
+  const fileNameWithExt = parts[parts.length - 1];
+  const fileNameWithoutExt = fileNameWithExt.split('.')[0];
+  return fileNameWithoutExt;
+};
+
+const fileName = getFileNameFromId(id);
+
+const socialImage = heroImage
+  ? typeof heroImage.src === 'string'
+    ? heroImage.src
+    : heroImage.src.src
+  : '/images/social-card.png'
+const articleDate = updated?.toISOString() ?? publishDate?.toISOString() ?? new Date().toISOString()
+const metaTitle = fileName || 'Note'
+---
+
+<BaseLayout
+  meta={{ articleDate, description, ogImage: socialImage, title: metaTitle }}
+>
+  <div class='w-full min-h-[calc(100vh-12rem)] flex items-center justify-center py-12'>
+    <div class='max-w-2xl w-full mx-auto rounded-xl shadow-lg p-6 md:p-8 transition-all hover:shadow-xl'>
+      {/* 小字号：更新时间 */}
+      {updated && (
+        <div class='text-xs text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-1'>
+          <Icon name='calendar' class='size-4' />
+          <span>Updated {new Date(updated).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })}</span>
+        </div>
+      )}
+      
+      {/* 卡片标题 */}
+      <h1 class='text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-6'>
+        {fileName}
+      </h1>
+      
+      {/* 别名内容 */}
+      {aliases && aliases.length > 0 && (
+        <div class='flex items-center gap-1 mb-4 text-gray-600 dark:text-gray-300'>
+          {aliases.join('、')}
+        </div>
+      )}
+      
+      {/* 卡片标签 */}
+      {!!data.tags?.length && (
+        <span class='flex items-center gap-1'>
+          <Icon name='hashtag' class='size-5' />
+          {processTags(data.tags).map((tag: string, i: number) => (
+            <div>
+              <a
+                  aria-label={`View more notes with the tag ${tag}`}
+                  data-pagefind-filter='tag'
+                  href={`/tags/${tag}`}
+                >
+                  {tag}
+                </a>
+                {i < processTags(data.tags).length - 1 && '/'} 
+            </div>
+          ))}
+        </span>
+      )}
+      
+      {/* 分隔线 */}
+      <div class='w-full border-t border-gray-200 dark:border-gray-700 my-6' />
+      
+      {/* 卡片内容 */}
+      <div 
+        id='content' 
+        class='prose dark:prose-invert max-w-none'
+        style='font-family: "Noto Serif SC", "Songti SC", "STSong", serif;'
+      >
+        <slot />
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+{integ.mediumZoom.enable && <MediumZoom />}
+
+<style>
+  /* 卡片样式优化 */
+  .max-w-2xl {
+    background-color: rgba(244, 244, 240, 0.5);
+  }
+  
+  html.dark .max-w-2xl {
+    background-color: rgba(26, 29, 37, 0.5);
+  }
+  
+  /* 统一标题字体为宋体风格 */
+  h1,h3,h3,h4,h5,h5 {
+    font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  }
+  
+  #content {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  
+  #content p {
+    margin-bottom: 1rem;
+    color: var(--foreground);
+  }
+  
+  #content strong {
+    font-weight: 600;
+  }
+  
+  #content h1, #content h2, #content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* 响应式调整 */
+  @media (max-width: 768px) {
+    .max-w-2xl {
+      padding: 1.5rem !important;
+    }
+    
+    h1 {
+      font-size: 1.75rem !important;
+    }
+  }
+</style>

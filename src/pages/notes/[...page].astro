@@ -1,0 +1,138 @@
+﻿---
+import type { CollectionEntry } from 'astro:content'
+import { getBlogCollection } from 'astro-pure/server'
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import NotePreview from '@/components/note/NotePreview.astro'
+
+export const prerender = true
+
+function getDateValue(entry: CollectionEntry<'notes'>): number {
+  const { updated, publishDate } = entry.data
+  return new Date(updated || publishDate || new Date(0)).getTime()
+}
+
+export async function getStaticPaths() {
+  const collections = (await getBlogCollection('notes')) as CollectionEntry<'notes'>[]
+  collections.sort((a, b) => getDateValue(b) - getDateValue(a))
+
+  const collectionsCount = collections.length
+  const page1Size = 66
+  const page2Size = 78
+
+  let totalPages = 1
+  if (collectionsCount > page1Size) {
+    totalPages++
+    if (collectionsCount > page1Size + page2Size) {
+      totalPages++
+    }
+  }
+
+  const paths = []
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    let pageSize = 78
+    let startIndex = 0
+
+    if (pageNum === 1) {
+      pageSize = page1Size
+    } else if (pageNum === 2) {
+      startIndex = page1Size
+    } else if (pageNum === 3) {
+      startIndex = page1Size + page2Size
+    }
+
+    const pageData = collections.slice(startIndex, startIndex + pageSize)
+
+    paths.push({
+      params: { page: pageNum === 1 ? undefined : String(pageNum) },
+      props: {
+        pageData,
+        pageNum,
+        totalPages,
+        collectionsCount
+      }
+    })
+  }
+
+  return paths
+}
+
+interface Props {
+  pageData?: CollectionEntry<'notes'>[]
+  pageNum?: number
+  totalPages?: number
+  collectionsCount?: number
+}
+
+const { pageData = [], pageNum = 1, totalPages = 1, collectionsCount = 0 } = Astro.props as Props
+
+const prevUrl = pageNum > 1 ? (pageNum === 2 ? '/notes' : `/notes/${pageNum - 1}`) : null
+const nextUrl = pageNum < totalPages ? `/notes/${pageNum + 1}` : null
+
+const meta = {
+  articleDate: undefined,
+  description: 'Ideas and synced notes',
+  title: 'Notes'
+}
+---
+
+<PageLayout {meta}>
+  <Button title='Back Home' href='/' style='back' />
+  <main class='mt-8 lg:mt-12'>
+    <div id='content-header' class='animate mb-7'>
+      <h1 class='mb-2 mt-4 text-3xl font-semibold tracking-tight sm:mt-8 sm:text-4xl'>Notes</h1>
+      <p class='text-muted-foreground text-sm sm:text-base'>Ideas, snippets, and sparks.</p>
+    </div>
+
+    {pageData.length === 0 ? (
+      <div class='ui-empty-state animate'>
+        <p class='text-base font-medium'>No notes yet.</p>
+        <p class='mt-2 text-sm text-muted-foreground'>You can sync content from Obsidian.</p>
+      </div>
+    ) : (
+      <section id='content' class='animate'>
+        <div class='mb-5 flex flex-col justify-between text-sm sm:flex-row'>
+          <span class='notes-meta'>
+            Page {pageNum} · Showing {pageData.length} / {collectionsCount} notes
+          </span>
+        </div>
+
+        <ul class='grid gap-6 sm:grid-cols-2 lg:grid-cols-3 text-start'>
+          {pageData.map((post, index) => {
+            const showFullContent = pageNum === 1 && index < 6
+            return (
+              <NotePreview
+                {post}
+                card
+                excerptLength={showFullContent ? 150 : 0}
+                class={showFullContent ? '' : 'min-h-[60px]'}
+              />
+            )
+          })}
+        </ul>
+
+        <nav class='ui-page-nav'>
+          <div class='ui-page-nav-inner ui-page-nav-inner-stretch'>
+            {prevUrl && (
+              <a href={prevUrl} class='ui-page-nav-link'>
+                ← Previous
+              </a>
+            )}
+            {nextUrl && (
+              <a href={nextUrl} class='ui-page-nav-link'>
+                Next →
+              </a>
+            )}
+          </div>
+        </nav>
+      </section>
+    )}
+  </main>
+</PageLayout>
+
+<style>
+  .notes-meta {
+    color: hsl(var(--muted-foreground) / var(--un-text-opacity, 1));
+    letter-spacing: 0.01em;
+  }
+</style>

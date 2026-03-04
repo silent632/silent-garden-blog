@@ -1,0 +1,116 @@
+---
+import PageLayout from '@/layouts/BaseLayout.astro'
+import BookList from '@/components/book/booklist.astro'
+import { getBooksFromNotion, setNotionEnv, type YearData } from '@/utils/notion'
+import { type Book } from '@/utils/getBookCover'
+import { sortBooksByDate } from '@/utils/sortBooks'
+
+const NOTION_TOKEN = import.meta.env.NOTION_TOKEN
+const NOTION_DATABASE_ID = import.meta.env.NOTION_DATABASE_ID
+
+if (NOTION_TOKEN && NOTION_DATABASE_ID) {
+  setNotionEnv(NOTION_TOKEN, NOTION_DATABASE_ID)
+}
+
+let currentYearBooks: Book[] = []
+let recommendedBooks: Book[] = []
+let previousYears: YearData[] = []
+let currentYear: number = new Date().getFullYear()
+let errorMessage: string | null = null
+
+try {
+  const booksData = await getBooksFromNotion()
+  currentYear = booksData.currentYear
+
+  const currentYearData = booksData.years.find((yearData: YearData) => yearData.year === currentYear)
+  if (currentYearData) {
+    currentYearBooks = sortBooksByDate(currentYearData.books)
+  }
+
+  const currentViewYearData = booksData.years.find((yearData: YearData) => yearData.year === currentYear)
+  if (currentViewYearData) {
+    recommendedBooks = currentViewYearData.books
+      .filter((book: Book) => book.recommend === true)
+      .slice(0, 10)
+  } else {
+    recommendedBooks = []
+  }
+
+  previousYears = booksData.years.filter((yearData: YearData) => yearData.year !== currentYear)
+} catch (error) {
+  console.error('Data initialization error:', error)
+  errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+  currentYearBooks = []
+  recommendedBooks = []
+  previousYears = []
+}
+---
+
+<PageLayout meta={{ title: 'Bookshelf', description: 'Books I read and recommend' }} highlightColor='#64879A'>
+  <main class='flex w-full flex-col items-center py-8'>
+    <div id='content' class='animate text-lg flex flex-col items-center gap-y-10 md:w-4/5 lg:w-5/6'>
+      {recommendedBooks.length > 0 && (
+        <BookList books={recommendedBooks} year={currentYear} title='Recommended' startIndex={0} />
+      )}
+
+      {currentYearBooks.length > 0 && (
+        <BookList
+          books={currentYearBooks}
+          year={currentYear}
+          title={`${currentYear} Reading`}
+          startIndex={recommendedBooks.length}
+        />
+      )}
+
+      {errorMessage && (
+        <div class='ui-empty-state status-card text-center text-red-600 dark:text-red-400'>
+          <p>Failed to load data: {errorMessage}</p>
+        </div>
+      )}
+
+      {currentYearBooks.length === 0 && recommendedBooks.length === 0 && !errorMessage && (
+        <div class='ui-empty-state status-card text-center text-muted-foreground'>
+          <p>No book data yet. Add books in Notion to sync.</p>
+        </div>
+      )}
+
+      {previousYears.length > 0 && (
+        <section class='mb-12 w-full'>
+          <div class='year-links text-center'>
+            <span class='text-lg font-medium mr-2'>Previous Years:</span>
+            {previousYears.map((yearData, index) => (
+              <>
+                <a href={`/books/${yearData.year}`} class='ui-inline-link mx-1'>
+                  {yearData.year}
+                </a>
+                {index < previousYears.length - 1 && <span class='text-muted-foreground'> </span>}
+              </>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  </main>
+</PageLayout>
+
+<script>
+  import { initBookInteractions } from '@/utils/bookInteractions'
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initBookInteractions()
+  })
+</script>
+
+<style>
+  .status-card {
+    width: min(100%, 38rem);
+  }
+
+  .year-links {
+    border: 1px solid hsl(var(--border) / var(--un-border-opacity, 1));
+    border-radius: 0.85rem;
+    background-color: hsl(var(--background) / 0.72);
+    padding: 0.75rem 0.9rem;
+  }
+</style>

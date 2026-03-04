@@ -1,0 +1,300 @@
+---
+import { Image } from 'astro:assets'
+import { render, type CollectionEntry, type CollectionKey } from 'astro:content'
+import type { HTMLTag, Polymorphic } from 'astro/types'
+
+import { cn } from 'astro-pure/utils'
+import { Button, FormattedDate, Icon } from 'astro-pure/user'
+import { processTags, formatTag } from '@/utils/formatTag'
+
+type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> & {
+  post: CollectionEntry<CollectionKey>
+  detailed?: boolean
+  simple?: boolean
+  emphasized?: boolean
+  class?: string
+}
+
+const {
+  as: Tag = 'div',
+  post,
+  detailed = false,
+  simple = false,
+  emphasized = false,
+  class: className
+} = Astro.props
+
+const { id, data } = post
+
+const { remarkPluginFrontmatter } = await render(post)
+const postDate = data.updated ?? data.publishDate
+---
+
+<li
+  class={cn(
+    'post-preview group/card relative flex flex-col rounded-2xl border px-5 py-2.5 transition-colors duration-200 ease-out',
+    (detailed || simple) && 'max-sm:px-4 sm:py-4.5',
+    emphasized && 'py-4 sm:py-5.5',
+    className
+  )}
+
+  style={detailed &&
+    data.heroImage?.color &&
+    `--preview-highlight:color-mix(in srgb,${data.heroImage.color} 40%,hsl(var(--foreground)/var(--un-text-opacity,1)));
+    --preview-highlight-bg:hsl(from ${data.heroImage.color} h s l/20%)`}
+>
+  <a
+    class={cn(
+      'group/link w-full flex flex-col transition-all hover:text-primary',
+      !detailed || simple && 'sm:flex-row',
+      detailed && data.heroImage && 'max-md:pt-24'
+    )}
+    href={`/blog/${id}`}
+    data-astro-prefetch
+  >
+    {
+      detailed && data.heroImage && (
+        <Image
+          alt={data.heroImage.alt || data.title}
+          class='cover-image absolute end-0 top-0 z-0 h-2/3 w-full rounded-2xl object-cover opacity-50 transition-opacity duration-300 group-hover/card:opacity-70 md:h-full md:w-3/5'
+          loading='eager'
+          {...data.heroImage}
+        />
+      )
+    }
+
+
+    <Tag class='z-10 flex-grow'>
+
+      {/* Simple style metadata */}
+      {simple && (
+        <div
+          class={cn(
+            'mb-0.5 flex items-center gap-2 py-0.5 text-xs text-muted-foreground',
+            emphasized && 'text-sm'
+          )}
+        >
+
+          <FormattedDate date={postDate} />
+          
+          {/* reading time */}
+          <span class='flex items-center gap-1'>
+            <Icon name='time' class='size-4' />
+            {remarkPluginFrontmatter.minutesRead}
+          </span>
+
+          {/* language */}
+          {data.language && (
+            <span class='flex items-center gap-1'>
+              <Icon name='earth' class='size-4' />
+              {data.language}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Detailed style metadata */}
+      {detailed && (
+        <div class='mb-0.5 flex items-center gap-2 py-0.5 text-xs text-muted-foreground'>
+          <FormattedDate date={postDate} />
+          
+          {/* reading time */}
+          <span class='flex items-center gap-1 text-xs'>
+            <Icon name='time' class='size-4' />
+            {remarkPluginFrontmatter.minutesRead}
+          </span>
+
+          {/* language */}
+          {data.language && (
+            <span class='flex items-center gap-1'>
+              <Icon name='earth' class='size-4' />
+              {data.language}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Default style - show date and title as separate modules */}
+      {!detailed && !simple && (
+        <div class='flex items-center justify-between gap-4 w-full'>
+          {/* Date and title container with responsive layout */}
+          <div class='flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 flex-grow'>
+            {/* Date module with fixed size and separate color */}
+            <div class='flex-shrink-0 w-25 text-left text-primary'>
+              <FormattedDate date={postDate} dateTimeOptions={{ month: '2-digit', day: '2-digit' }} />
+            </div>
+            
+            {/* Title module */}
+            <div class='flex-grow text-base'>
+              {data.draft && <span class='text-red-500'>(Draft) </span>}
+              <strong>{data.title}</strong>
+            </div>
+          </div>
+          
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            width='16'
+            height='16'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke-width='2.5'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+            class='preview-redirect my-1 stroke-muted-foreground group-hover/link:stroke-primary'
+          >
+            <line
+              x1='5'
+              y1='12'
+              x2='19'
+              y2='12'
+              class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1 group-hover/link:scale-x-100'
+            ></line>
+            <polyline
+              points='12 5 19 12 12 19'
+              class='translate-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1'
+            ></polyline>
+          </svg>
+        </div>
+      )}
+
+      {/* title for simple/detailed styles */}
+      {(detailed || simple) && (
+        <div class='mb-0.5 flex justify-between'>
+          <div class={cn(detailed || simple ? 'text-lg leading-[1.45]' : '', emphasized && 'text-xl leading-[1.5]')}>
+            {data.draft && <span class='text-red-500'>(Draft) </span>}
+            <strong>{data.title}</strong>
+          </div>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            width='16'
+            height='16'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke-width='2.5'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+            class='preview-redirect my-1 stroke-muted-foreground group-hover/link:stroke-primary'
+          >
+            <line
+              x1='5'
+              y1='12'
+              x2='19'
+              y2='12'
+              class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1 group-hover/link:scale-x-100'
+            ></line>
+            <polyline
+              points='12 5 19 12 12 19'
+              class='translate-x-0 transition-all duration-300 ease-in-out group-hover/link:translate-x-1'
+            ></polyline>
+          </svg>
+        </div>
+      )}
+
+      {simple && (
+        <>
+          {/* desc */}
+          {data.description && (
+            <p
+              class={cn(
+                'mb-1 line-clamp-2 pt-0.5 text-[0.98rem] text-muted-foreground sm:line-clamp-3',
+                emphasized && 'text-[1.06rem] leading-8'
+              )}
+            >
+              {data.description}
+            </p>
+          )}
+        </>
+      )}
+
+      {detailed && (
+
+          <>
+            {/* desc */}
+            <p
+              class={cn(
+                'mb-1.5 line-clamp-2 pt-0.5 text-[0.98rem] leading-relaxed text-muted-foreground sm:line-clamp-3',
+                data.heroImage && 'sm:me-24'
+              )}
+            >
+              {data.description}
+            </p>
+
+          </>
+        )
+      }
+    </Tag>
+  </a>
+
+  {/* tags */}
+  {
+    detailed && data.tags && (
+      <ul class='tag-list mt-1 flex flex-wrap gap-2'>
+        {processTags(data.tags).map((tag: string) => (
+        <li>
+          <Button title={tag} href={`/tags/${formatTag(tag)}`} style='pill'>{formatTag(tag)}</Button>
+        </li>
+      ))}
+      </ul>
+    )
+  }
+</li>
+
+<style>
+  .post-preview {
+    --preview-highlight-final: var(
+      --preview-highlight,
+      hsl(var(--primary) / var(--un-text-opacity, 1))
+    );
+    border-color: hsl(var(--border) / 0.9);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.84),
+      hsl(var(--youth-accent) / 0.05)
+    );
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.035);
+  }
+  .post-preview:hover {
+    border-color: hsl(var(--primary) / 0.26);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.055);
+    &,
+    & .tag-list a {
+      background-color: var(
+        --preview-highlight-bg,
+        hsl(var(--youth-accent) / 0.09)
+      ) !important;
+    }
+    & > a,
+    & .tag-list a:hover {
+      color: var(--preview-highlight-final) !important;
+    }
+    & > a .preview-redirect {
+      stroke: var(--preview-highlight-final) !important;
+    }
+  }
+  .cover-image {
+    mask-image: linear-gradient(to right, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+    -ms-mask-image: -ms-linear-gradient(to right, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+    -webkit-mask-image: -webkit-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) 100%
+    );
+  }
+
+  .post-preview:focus-within {
+    border-color: hsl(var(--primary) / var(--un-border-opacity, 1));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .cover-image {
+      mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+      -ms-mask-image: -ms-linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
+      -webkit-mask-image: -webkit-linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 1) 100%
+      );
+    }
+  }
+</style>

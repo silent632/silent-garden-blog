@@ -1,0 +1,311 @@
+﻿---
+import { Button, Icon } from '../../../packages/pure/components/user'
+import { getBookCover, type Book } from '../../utils/getBookCover'
+
+interface Props {
+  book: Book
+  year: number
+  index: number
+}
+
+const { book, year, index } = Astro.props
+
+const commentParagraphs = book.comment ? book.comment.split('\n').filter((p) => p.trim() !== '') : []
+---
+
+<style>
+  dialog.book-dialog {
+    background: transparent;
+    border: none;
+    width: min(96vw, 62rem);
+    max-height: 92vh;
+    padding: 0;
+    margin: auto;
+    overflow: visible;
+  }
+
+  dialog.book-dialog[open] {
+    display: grid;
+    place-items: center;
+  }
+
+  dialog.book-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.74);
+    backdrop-filter: blur(1px);
+  }
+
+  .book-dialog-panel {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: min(90vh, 56rem);
+    border: 1px solid hsl(var(--border) / 0.9);
+    border-radius: 1rem;
+    background: hsl(var(--background) / 1);
+    box-shadow: 0 28px 64px rgba(2, 6, 23, 0.38);
+    overflow: hidden;
+  }
+
+  .book-dialog-header {
+    border-bottom: 1px solid hsl(var(--border) / 0.75);
+    background: hsl(var(--card) / 1);
+    padding: 1.35rem 1.2rem;
+  }
+
+  .book-dialog-header-grid {
+    display: grid;
+    grid-template-columns: 5.9rem minmax(0, 1fr);
+    gap: 0.9rem;
+    align-items: start;
+  }
+
+  .book-title {
+    color: hsl(var(--foreground) / 0.96);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+    margin: 0 0 0.75rem;
+    padding-right: 2.2rem;
+  }
+
+  .book-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .book-action {
+    margin-top: 0.35rem;
+  }
+
+  .book-dialog-body {
+    background: hsl(var(--background) / 1);
+    overflow-y: auto;
+    padding: 1.15rem 1.2rem 1.4rem;
+  }
+
+  .book-content-wrap {
+    margin-inline: auto;
+    max-width: 45rem;
+  }
+
+  .book-content-section + .book-content-section {
+    margin-top: 1.15rem;
+    border-top: 1px solid hsl(var(--border) / 0.65);
+    padding-top: 1.05rem;
+  }
+
+  .book-section-title {
+    color: hsl(var(--muted-foreground) / 0.96);
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 0.72rem;
+  }
+
+  .book-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid hsl(var(--border) / 0.8);
+    border-radius: 999px;
+    background: hsl(var(--background) / 1);
+    color: hsl(var(--muted-foreground) / 1);
+    font-size: 0.78rem;
+    padding: 0.22rem 0.62rem;
+  }
+
+  .book-score-chip {
+    color: hsl(30 80% 30%);
+    background: hsl(42 95% 88% / 1);
+    border-color: hsl(42 72% 70% / 1);
+    font-weight: 700;
+  }
+
+  .book-comment-paragraph {
+    color: hsl(var(--foreground) / 0.95);
+    font-size: 1.04rem;
+    line-height: 2.04;
+    letter-spacing: 0.012em;
+    text-align: left;
+    word-break: break-word;
+  }
+
+  .book-quote-card {
+    border: 1px solid hsl(var(--border) / 0.8);
+    border-left: 4px solid hsl(var(--primary) / 0.85);
+    border-radius: 0.76rem;
+    background: hsl(var(--muted) / 0.62);
+    margin-top: 0.35rem;
+    padding: 1rem 1.02rem;
+  }
+
+  .book-quote-label {
+    display: block;
+    color: hsl(var(--muted-foreground) / 0.95);
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .book-quote-text {
+    color: hsl(var(--foreground) / 0.9);
+    font-style: italic;
+    line-height: 1.94;
+    font-size: 1rem;
+  }
+
+  .book-empty-state {
+    padding: 1.2rem 0.2rem;
+    line-height: 1.85;
+  }
+
+  .comment-area::-webkit-scrollbar {
+    width: 6px;
+  }
+  .comment-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .comment-area::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  .comment-area::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  .dark .comment-area::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  .dark .comment-area::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+
+  :global(.dark) .book-dialog-panel {
+    box-shadow: 0 28px 64px rgba(2, 6, 23, 0.74);
+  }
+
+  :global(.dark) .book-score-chip {
+    color: hsl(41 92% 88%);
+    background: hsl(33 50% 26%);
+    border-color: hsl(35 42% 35%);
+  }
+
+  @media (min-width: 640px) {
+    .book-dialog-header {
+      padding: 1.55rem 1.6rem 1.22rem;
+    }
+
+    .book-dialog-header-grid {
+      grid-template-columns: 6.8rem minmax(0, 1fr);
+      gap: 1.1rem;
+    }
+
+    .book-title {
+      font-size: 1.62rem;
+      line-height: 1.33;
+      margin-bottom: 0.9rem;
+      padding-right: 2.5rem;
+    }
+
+    .book-dialog-body {
+      padding: 1.35rem 1.6rem 1.65rem;
+    }
+
+    .book-content-section + .book-content-section {
+      margin-top: 1.3rem;
+      padding-top: 1.15rem;
+    }
+  }
+</style>
+
+<dialog class='book-dialog fixed inset-0 z-50' data-dialog-id={index}>
+  <article class='book-dialog-panel'>
+    <div class='absolute top-3 right-3 z-20'>
+      <button
+        class='close-dialog h-8 w-8 flex items-center justify-center rounded-full border border-border/70 bg-background/85 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted focus:outline-none focus:ring-0'
+        aria-label='Close dialog'
+      >
+        ×
+      </button>
+    </div>
+
+    <header class='book-dialog-header'>
+      <div class='book-dialog-header-grid'>
+        <div class='aspect-[2/3] overflow-hidden rounded-lg shadow-md'>
+          <img
+            src={getBookCover(book, year)}
+            alt={book.title}
+            class='h-full w-full object-cover'
+            decoding='async'
+          />
+        </div>
+
+        <div class='min-w-0'>
+          <h3 class='book-title'>{book.title}</h3>
+
+          <div class='book-meta-row'>
+            <span class='book-chip book-score-chip'>{book.score} pts</span>
+            {book.date && (
+              <span class='book-chip'>
+                <Icon name='calendar' class='size-3.5' />
+                Finished on {book.date}
+              </span>
+            )}
+          </div>
+
+          {book.link && (
+            <div class='book-action'>
+              <Button href={book.link} target='_blank' variant='default'>
+                <Icon name='link' class='mr-2 h-4 w-4' />
+                View on Douban
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+
+    {(commentParagraphs.length > 0 || book.quote) && (
+      <section class='comment-area book-dialog-body'>
+        <div class='book-content-wrap'>
+          <section class='book-content-section'>
+            <p class='book-section-title'>Reading Notes</p>
+          </section>
+
+          {commentParagraphs.length > 0 && (
+            <section class='book-content-section'>
+              <p class='book-section-title'>Review</p>
+              {commentParagraphs.map((paragraph, i) => (
+                <p class:list={['book-comment-paragraph', i < commentParagraphs.length - 1 && 'mb-4']}>
+                  {paragraph}
+                </p>
+              ))}
+            </section>
+          )}
+
+          {book.quote && (
+            <section class='book-content-section'>
+              <p class='book-section-title'>Highlights</p>
+              <figure class='book-quote-card'>
+                <figcaption class='book-quote-label'>Selected Passage</figcaption>
+                <blockquote class='book-quote-text'>{book.quote}</blockquote>
+              </figure>
+            </section>
+          )}
+        </div>
+      </section>
+    )}
+
+    {commentParagraphs.length === 0 && !book.quote && (
+      <div class='book-dialog-body'>
+        <div class='book-content-wrap'>
+          <div class='book-empty-state ui-empty-state text-center text-muted-foreground'>
+            No review available yet. Add notes in Notion to enrich this page.
+          </div>
+        </div>
+      </div>
+    )}
+  </article>
+</dialog>

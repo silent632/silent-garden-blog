@@ -1,0 +1,101 @@
+﻿---
+import type { CollectionEntry } from 'astro:content'
+import { getBlogCollection } from 'astro-pure/server'
+import { Button } from 'astro-pure/user'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import DiaryCard from '@/components/diary/DiaryCard.astro'
+
+export const prerender = true
+
+export async function getStaticPaths() {
+  const entries = (await getBlogCollection('diary')) as CollectionEntry<'diary'>[]
+  entries.sort(
+    (a, b) =>
+      new Date(b.data.publishDate || new Date(0)).getTime() -
+      new Date(a.data.publishDate || new Date(0)).getTime()
+  )
+
+  const pageSize = 30
+  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize))
+
+  const paths = []
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const start = (pageNum - 1) * pageSize
+    const pageData = entries.slice(start, start + pageSize)
+
+    paths.push({
+      params: { page: pageNum === 1 ? undefined : String(pageNum) },
+      props: { pageData, pageNum, totalPages }
+    })
+  }
+
+  return paths
+}
+
+interface Props {
+  pageData?: CollectionEntry<'diary'>[]
+  pageNum?: number
+  totalPages?: number
+}
+
+const { pageData = [], pageNum = 1, totalPages = 1 } = Astro.props as Props
+
+const prevUrl = pageNum > 1 ? (pageNum === 2 ? '/diary' : `/diary/${pageNum - 1}`) : null
+const nextUrl = pageNum < totalPages ? `/diary/${pageNum + 1}` : null
+
+const meta = {
+  articleDate: undefined,
+  description: 'Public diary and reflections',
+  title: 'Diary'
+}
+---
+
+<BaseLayout {meta}>
+  <Button title='Back Home' href='/' style='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <h1 class='mb-3 mt-6 text-3xl font-medium sm:mt-10'>Diary</h1>
+      <p class='text-sm text-muted-foreground leading-7 sm:text-base'>
+        Mood, sparks, and everyday thoughts.
+      </p>
+    </div>
+
+    {pageData.length === 0 ? (
+      <div class='ui-empty-state text-muted-foreground'>No diary entries yet.</div>
+    ) : (
+      <section id='content' class='animate'>
+        <div class='mb-3 flex flex-col justify-between text-sm sm:mb-5 sm:flex-row'>
+          <span class='text-muted-foreground'>
+            Page {pageNum} · Showing {pageData.length} entries
+          </span>
+        </div>
+
+        <ul class='flex flex-col gap-y-4 text-start'>
+          {pageData.map((post) => (
+            <DiaryCard {post} />
+          ))}
+        </ul>
+
+        {totalPages > 1 && (
+          <nav class='ui-page-nav'>
+            <div class='ui-page-nav-inner ui-page-nav-inner-stretch'>
+              {prevUrl && (
+                <a href={prevUrl} class='ui-page-nav-link'>
+                  ← Previous
+                </a>
+              )}
+              <span class='ui-page-nav-indicator'>
+                {pageNum} / {totalPages}
+              </span>
+              {nextUrl && (
+                <a href={nextUrl} class='ui-page-nav-link'>
+                  Next →
+                </a>
+              )}
+            </div>
+          </nav>
+        )}
+      </section>
+    )}
+  </main>
+</BaseLayout>

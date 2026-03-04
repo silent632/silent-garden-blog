@@ -1,0 +1,192 @@
+﻿---
+import { Image } from 'astro:assets'
+import type { CollectionEntry } from 'astro:content'
+
+import PostPreview from '@/components/post/PostPreview.astro'
+import DiaryCard from '@/components/diary/DiaryCard.astro'
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import { Button, Icon, Label } from 'astro-pure/user'
+
+import PageLayout from '@/layouts/BaseLayout.astro'
+import Section from '@/components/home/Section.astro'
+import avatar from '@/assets/avatar.png'
+import config from '@/site-config'
+
+const MAX_POSTS = 6
+const MAX_DIARIES = 3
+const allPosts = await getBlogCollection()
+const allPostsByDate = sortMDByDate(allPosts).slice(0, MAX_POSTS)
+const allDiaries = (await getBlogCollection('diary')) as CollectionEntry<'diary'>[]
+const allDiariesByDate = allDiaries
+  .sort((a, b) => new Date(b.data.publishDate).getTime() - new Date(a.data.publishDate).getTime())
+  .slice(0, MAX_DIARIES)
+---
+
+<PageLayout meta={{ title: 'Home' }} highlightColor='#64879A'>
+  <main class='home-youth-page flex w-full flex-col items-center'>
+    <section class='home-hero animate mb-10 flex flex-col items-center gap-y-7' id='content-header'>
+      <Image
+        src={avatar}
+        alt='profile'
+        class='h-28 w-auto rounded-full border p-1'
+        loading='eager'
+      />
+
+      <div class='flex flex-col items-center gap-y-4'>
+        <h1 class='text-3xl font-bold'>{config.author}</h1>
+        <div class='flex flex-wrap justify-center gap-x-7 gap-y-3'>
+          <Label title='China'>
+            <Icon name='location' class='size-5' slot='icon' />
+          </Label>
+        </div>
+      </div>
+
+      <a
+        href='/about'
+        target='_blank'
+        class='home-pill flex flex-row items-center gap-x-3 rounded-full border bg-background px-4 py-2 text-sm shadow-sm transition-shadow hover:shadow-md'
+      >
+        <span class='relative flex items-center justify-center'>
+          <span
+            class='absolute size-2 animate-ping rounded-full border opacity-75'
+            style='border-color:hsl(var(--primary) / 0.72);background-color:hsl(var(--primary) / 0.72);'
+          ></span>
+          <span class='size-2 rounded-full' style='background-color:hsl(var(--primary) / 1);'></span>
+        </span>
+        <p class='font-medium text-muted-foreground'>Read More</p>
+      </a>
+    </section>
+
+    <br />
+
+    <div id='content' class='home-content animate text-lg flex flex-col gap-y-10 md:w-4/5 lg:w-5/6'>
+      <Section title='About'>
+        <p class='text-muted-foreground'>欢迎来到 Silent 的花园。</p>
+        <p class='home-about-copy text-muted-foreground' style='line-height: 1.8;'>
+          在噪声像警报一样循环的时代，我把阅读、写作与生活当作<strong>长期实验</strong>。<br />
+          每一次记录，都是对<strong>自我同步率</strong>的校准；每一次复盘，都是向更真实的自己推进一格。<br />
+          我相信<strong>长期主义</strong>: 不追逐瞬时胜利，只把<strong>时间站在我这边</strong>。
+        </p>
+      </Section>
+
+      <Section title='Diary'>
+        {
+          allDiariesByDate.length > 0 ? (
+            <ul class='flex flex-col gap-y-3.5 text-start'>
+              {allDiariesByDate.map((entry) => (
+                <DiaryCard post={entry} simple borderless />
+              ))}
+            </ul>
+          ) : (
+            <p class='text-muted-foreground'>No diary entries yet.</p>
+          )
+        }
+
+        <Button title='More Diary' class='w-fit self-end' href='/diary' style='ahead' />
+      </Section>
+
+      {
+        allPostsByDate.length > 0 && (
+          <Section title='Posts'>
+            <ul class='flex flex-col gap-y-3'>
+              {allPostsByDate.map((p) => (
+                <PostPreview post={p} simple emphasized />
+              ))}
+            </ul>
+            <Button title='More Posts' class='w-fit self-end' href='/blog' style='ahead' />
+          </Section>
+        )
+      }
+    </div>
+
+    <br />
+    <br />
+
+    <a
+      href='/about'
+      target='_blank'
+      class='home-pill flex flex-row items-center gap-x-3 rounded-full border bg-background px-4 py-2 text-sm shadow-sm transition-shadow hover:shadow-md'
+    >
+      <span class='relative flex items-center justify-center'>
+        <span
+          class='absolute size-2 animate-ping rounded-full border opacity-75'
+          style='border-color:hsl(var(--primary) / 0.72);background-color:hsl(var(--primary) / 0.72);'
+        ></span>
+        <span class='size-2 rounded-full' style='background-color:hsl(var(--primary) / 1);'></span>
+      </span>
+      <p class='font-medium text-muted-foreground'>Long-termism</p>
+    </a>
+  </main>
+</PageLayout>
+
+<style>
+  .home-hero :global(img[alt='profile']) {
+    border-color: hsl(var(--border) / 0.78);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .home-about-copy {
+    font-weight: 500;
+    letter-spacing: 0.004em;
+  }
+
+  .home-about-copy strong {
+    color: hsl(var(--foreground) / 0.95);
+    font-weight: 650;
+  }
+
+  .home-pill {
+    border-color: hsl(var(--border) / 0.72);
+    background-image: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.98),
+      hsl(var(--background) / 0.88)
+    );
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    transition:
+      border-color var(--motion-fast) var(--motion-ease),
+      box-shadow var(--motion-base) var(--motion-ease),
+      background-color var(--motion-fast) var(--motion-ease),
+      transform var(--motion-fast) var(--motion-ease);
+  }
+
+  .home-pill:hover {
+    border-color: hsl(var(--primary) / 0.34);
+    background-color: hsl(var(--youth-accent) / 0.07);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .home-youth-page :global(.post-preview),
+  .home-youth-page :global(.diary-preview) {
+    border-color: hsl(var(--border) / 0.56);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.84),
+      hsl(var(--youth-accent) / 0.05)
+    );
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
+    transition-duration: 260ms;
+  }
+
+  .home-youth-page :global(.post-preview:hover),
+  .home-youth-page :global(.diary-preview:hover) {
+    border-color: hsl(var(--primary) / 0.28);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--background) / 0.9),
+      hsl(var(--youth-accent) / 0.09)
+    );
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.055);
+  }
+
+  .home-youth-page :global(.post-preview:hover > a),
+  .home-youth-page :global(.diary-preview:hover > a) {
+    color: hsl(var(--youth-accent-ink) / 1);
+  }
+
+  .home-youth-page :global(.post-preview:hover > a .preview-redirect),
+  .home-youth-page :global(.diary-preview:hover > a .preview-redirect) {
+    stroke: hsl(var(--youth-accent-ink) / 1);
+  }
+</style>

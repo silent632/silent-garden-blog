@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Portfolio Website",
+    "description": "A personal portfolio site built with Next.js and Tailwind CSS",
+    "image": "",
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/example/portfolio"
+      },
+      {
+        "type": "site",
+        "href": "https://example.com"
+      }
+    ]
+  },
+  {
+    "name": "CLI Toolbox",
+    "description": "A collection of useful command-line utilities written in Rust",
+    "image": "",
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/example/cli-toolbox"
+      },
+      {
+        "type": "doc",
+        "href": "https://cli-toolbox.readthedocs.io"
+      },
+      {
+        "type": "release",
+        "href": "https://github.com/example/cli-toolbox/releases"
+      }
+    ]
+  },
+  {
+    "name": "Weather Dashboard",
+    "description": "Real-time weather dashboard with interactive maps and charts",
+    "image": "",
+    "links": [
+      {
+        "type": "site",
+        "href": "https://weather-app.example.com"
+      },
+      {
+        "type": "link",
+        "href": "https://weather-dashboard.example.com"
+      }
+    ]
+  }
+]

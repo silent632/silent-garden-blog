@@ -1,0 +1,84 @@
+﻿---
+import links from 'public/links.json'
+import config from 'virtual:config'
+
+import { Comment } from 'astro-pure/advanced'
+import { Collapse, Spoiler, Timeline } from 'astro-pure/user'
+import PageLayout from '@/layouts/CommonPage.astro'
+import FriendList from '@/components/links/FriendList.astro'
+import { CardList } from 'astro-pure/user'
+
+const headings = [
+  { depth: 2, slug: 'hobbies', text: 'Hobbies' },
+  { depth: 2, slug: 'links', text: 'Links' },
+  { depth: 2, slug: 'about-blog', text: 'About Blog' }
+]
+
+const { friends } = links
+const linksConf = config.integ.links
+---
+
+<PageLayout title='About' {headings} info='/about'>
+  <p>Welcome to Silent's Garden.</p>
+  <p style='line-height: 2;'>
+    This is my digital garden.<br />
+    I believe in long-termism, and I write about thoughts, reading, and life.<br />
+    Hope you find something interesting here.
+  </p>
+
+  <p>
+    <Spoiler>Easter egg: hope you have a wonderful day.</Spoiler>
+  </p>
+
+  <h2 id='hobbies'>Hobbies</h2>
+  <ul>
+    <li>Add your hobbies here...</li>
+  </ul>
+
+  <h2 id='links'>Links</h2>
+  <p>Link exchange is welcome:</p>
+
+  <FriendList list={friends[0]} />
+
+  <!-- apply-links -->
+  <p>Apply for link exchange:</p>
+  <p>Site profile (click to copy):</p>
+  <blockquote class='not-prose grid grid-cols-[auto_1fr] gap-x-2 break-words border-s-4 ps-4'>
+    {
+      linksConf.applyTip.map(({ name, val }) => {
+        const script = `navigator.clipboard.writeText('${val}');document.dispatchEvent(new CustomEvent('toast',{detail:{message:'Copied "${val}"'}}))`
+        return (
+          <>
+            <span class='text-end'>{name}:</span>
+            <samp class='cursor-pointer' onclick={script}>
+              {val}
+            </samp>
+          </>
+        )
+      })
+    }
+  </blockquote>
+
+  <br />
+
+  <CardList
+    title='Before applying, please make sure:'
+    list={[
+      { title: '1. You have added this site to your links page.' },
+      { title: '2. Your site is online and accessible.' },
+      { title: '3. Content does not violate laws or regulations.' }
+    ]}
+  />
+
+  <h2 id='about-blog'>About this blog</h2>
+  <p>
+    Built with Astro + Pure Theme, with thanks to the open-source community.<br />
+    Keep recording, keep compounding.
+  </p>
+
+  <Collapse title='Site Logbook'>
+    <Timeline events={linksConf.logbook} />
+  </Collapse>
+
+  <Comment slot='bottom' />
+</PageLayout>

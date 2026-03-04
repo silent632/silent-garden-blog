@@ -1,0 +1,25 @@
+{
+  "year": 2026,
+  "books": [
+    {
+      "title": "纳瓦尔宝典（The Almanack of Naval Ravikant）",
+      "score": 9,
+      "date": "2026-03-03",
+      "comment": "一本适合长期主义者反复阅读的书。最有价值的不是“致富技巧”，而是如何通过复利思维、判断力与杠杆，构建更自由的人生系统。",
+      "quote": "欲望越少，判断越清晰；判断越清晰，人生越自由。",
+      "cover": "https://covers.openlibrary.org/b/isbn/9781544514213-L.jpg",
+      "link": "https://book.douban.com/subject/34938454/",
+      "recommend": true
+    },
+    {
+      "title": "Atomic Habits",
+      "score": 7,
+      "date": "2026-01-20",
+      "comment": "Practical guide to building good habits",
+      "quote": "You do not rise to the level of your goals. You fall to the level of your systems.",
+      "cover": "",
+      "link": "https://book.douban.com/subject/34326931/",
+      "recommend": false
+    }
+  ]
+}

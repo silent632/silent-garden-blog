@@ -1,0 +1,136 @@
+﻿---
+import { render, type CollectionEntry } from 'astro:content'
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+
+import 'katex/dist/katex.min.css'
+import { MediumZoom } from 'astro-pure/advanced'
+import { Icon, Button } from 'astro-pure/user'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { integ } from '@/site-config'
+import { processTags } from '@/utils/formatTag'
+
+export const prerender = true
+
+export async function getStaticPaths() {
+  const posts = sortMDByDate(await getBlogCollection('diary'))
+  return posts.map((post) => ({
+    params: { id: post.id },
+    props: { post }
+  }))
+}
+
+type Props = {
+  post: CollectionEntry<'diary'>
+}
+
+const { post } = Astro.props as Props
+const { data } = post
+const { Content } = await render(post)
+
+const articleDate = data.publishDate.toISOString()
+const metaTitle = data.title || 'Diary'
+const tags = processTags(data.tags)
+---
+
+<BaseLayout meta={{ articleDate, title: metaTitle }}>
+  <div class='w-full py-8 lg:py-12'>
+    <div class='diary-detail mx-auto w-full max-w-3xl rounded-2xl p-6 md:p-9'>
+      <div class='mb-7'>
+        <Button title='Back to Diary' href='/diary' style='back' />
+      </div>
+
+      <div class='mb-5 flex items-center gap-3 text-sm text-muted-foreground'>
+        {data.mood && <span class='text-2xl'>{data.mood}</span>}
+        <span class='text-xs tracking-wide'>
+          <Icon name='calendar' class='inline size-4 mr-1' />
+          {data.publishDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })}
+        </span>
+      </div>
+
+      {data.title && (
+        <h1 class='mb-6 text-3xl font-semibold leading-tight tracking-tight md:text-4xl'>{data.title}</h1>
+      )}
+
+      {tags.length > 0 && (
+        <div class='mb-5 flex items-center gap-1.5'>
+          <Icon name='hashtag' class='size-4' />
+          {tags.map((tag: string, i: number) => (
+            <span>
+              <a
+                aria-label={`View more with tag ${tag}`}
+                href={`/tags/${tag}`}
+                class='text-sm text-muted-foreground hover:text-primary transition-colors'
+              >
+                {tag}
+              </a>
+              {i < tags.length - 1 && <span class='text-muted-foreground'>/</span>}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div class='my-7 w-full border-t border-border' />
+
+      <div id='content' class='prose dark:prose-invert max-w-none'>
+        <Content />
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+{integ.mediumZoom.enable && <MediumZoom />}
+
+<style>
+  .diary-detail {
+    border: 1px solid hsl(var(--border) / 0.72);
+    background-color: rgba(244, 244, 240, 0.5);
+    box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06);
+  }
+
+  html.dark .diary-detail {
+    background-color: rgba(26, 29, 37, 0.5);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
+  }
+
+  h1 {
+    font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  }
+
+  #content {
+    font-size: 1.03rem;
+    line-height: 1.9;
+    letter-spacing: 0.01em;
+  }
+
+  #content p {
+    margin-bottom: 1.1rem;
+    color: var(--foreground);
+  }
+
+  #content :global(h2),
+  #content :global(h3) {
+    margin-top: 2.1rem;
+    margin-bottom: 0.8rem;
+    line-height: 1.45;
+  }
+
+  #content :global(ul),
+  #content :global(ol) {
+    margin: 0.9rem 0 1.2rem;
+  }
+
+  #content :global(li) {
+    margin-bottom: 0.45rem;
+  }
+
+  #content img {
+    border-radius: 0.75rem;
+    margin: 1.2rem 0;
+  }
+
+  @media (max-width: 768px) {
+    .diary-detail {
+      padding: 1.35rem !important;
+    }
+  }
+</style>

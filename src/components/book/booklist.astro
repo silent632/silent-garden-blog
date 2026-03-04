@@ -1,0 +1,66 @@
+---
+import BookPreview from './bookpreview.astro'
+import BookCard from './bookcard.astro'
+import { type Book } from '../../utils/getBookCover';
+
+interface Props {
+  books: Book[];
+  year: number;
+  title: string;
+  startIndex?: number;
+}
+
+const { books, year, title, startIndex = 0 } = Astro.props;
+---
+
+<section class='mb-12 w-full'>
+  <h2 class='text-2xl font-bold mb-6 flex justify-center items-center gap-2'>
+    {title}
+  </h2>
+  
+  <div class='book-grid'>
+    {books.map((book, index) => {
+      const dialogIndex = startIndex + index;
+      return (
+        <>
+          <BookPreview book={book} year={year} index={dialogIndex} />
+          <BookCard book={book} year={year} index={dialogIndex} />
+        </>
+      );
+    })}
+  </div>
+</section>
+
+<style>
+  .book-grid {
+    display: grid;
+    gap: 0.95rem;
+    align-items: start;
+  }
+
+  .book-grid > :global(*) {
+    width: 100%;
+  }
+
+  .book-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (min-width: 480px) {
+    .book-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .book-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .book-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+</style>
