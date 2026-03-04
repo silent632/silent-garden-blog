@@ -35,17 +35,19 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           NOTION_PROJECTS_DATABASE_ID: ${{ secrets.NOTION_PROJECTS_DATABASE_ID }}
+          NOTION_BLOG_DATABASE_ID: ${{ secrets.NOTION_BLOG_DATABASE_ID }}
           NOTION_DIARY_DATABASE_ID: ${{ secrets.NOTION_DIARY_DATABASE_ID }}
         run: |
           npm run sync:notion:books
           npm run sync:notion:projects
+          npm run sync:notion:blog -- --clean
           npm run sync:notion:diary -- --clean
 
       - name: Commit and Push Changes
         run: |
           git config user.name "sync-bot"
           git config user.email "sync-bot@users.noreply.github.com"
-          git add src/data/books src/data/projects src/content/diary
+          git add src/data/books src/data/projects src/content/blog src/content/diary
           if git diff --cached --quiet; then
             echo "No content changes."
             exit 0

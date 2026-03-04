@@ -238,6 +238,24 @@ export const NOTION_DIARY_CONTRACT = {
   }
 }
 
+export const NOTION_BLOG_CONTRACT = {
+  source: 'notion',
+  targetDir: CONTENT_COLLECTION_DIRS.blog,
+  filePrefix: 'notion-',
+  showProperty: 'show',
+  propertyCandidates: {
+    title: ['title', 'Title', 'name', 'Name', '标题', '標題', '题目'],
+    description: ['description', 'Description', 'summary', 'Summary', '摘要', '简介', '簡介'],
+    publishDate: ['publishDate', 'publish date', 'date', 'Date', '发布时间', '發布時間', '发布日', '發布日'],
+    updated: ['updated', 'Updated', 'lastEdited', 'last edited', '更新时间', '更新時間'],
+    tags: ['tags', 'Tags', 'tag', 'Tag', '标签', '標籤'],
+    draft: ['draft', 'Draft'],
+    show: ['show', 'Show', 'public', 'Public', 'publish', 'Publish', 'visible', 'Visible', '公开', '公開'],
+    language: ['language', 'Language', 'lang', 'Lang', '语言', '語言'],
+    comment: ['comment', 'Comment', 'comments', 'Comments', '评论', '評論']
+  }
+}
+
 export function resolveFieldName(contract, inputKey) {
   if (Object.hasOwn(contract.fields, inputKey)) return inputKey
   for (const [canonical, field] of Object.entries(contract.fields)) {

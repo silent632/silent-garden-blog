@@ -22,10 +22,11 @@
     "sync:obsidian": "node scripts/sync/sync-obsidian.js",
     "sync:notion:books": "node scripts/sync/sync-notion-books.js --allow-missing-env",
     "sync:notion:projects": "node scripts/sync/sync-notion-projects.js --allow-missing-env",
+    "sync:notion:blog": "node scripts/sync/sync-notion-blog.js --allow-missing-env",
     "sync:notion:diary": "node scripts/sync/sync-notion-diary.js --allow-missing-env",
     "sync:phase-c": "npm run sync:obsidian && npm run sync:validate",
-    "sync:phase-c:full": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:diary",
-    "sync:all": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:diary -- --clean"
+    "sync:phase-c:full": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:blog && npm run sync:notion:diary",
+    "sync:all": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:blog -- --clean && npm run sync:notion:diary -- --clean"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",

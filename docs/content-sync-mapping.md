@@ -1,6 +1,6 @@
 # Phase B Content Sync Mapping
 
-Last updated: 2026-03-02
+Last updated: 2026-03-04
 
 ## Objective
 Phase B defines a stable data contract for content synchronization without changing the current site information architecture. It prepares Phase C automation scripts (Obsidian/Notion to site) while preserving existing behavior.
@@ -9,6 +9,7 @@ Phase B defines a stable data contract for content synchronization without chang
 - Obsidian markdown to Astro content collections: `blog`, `notes`, `diary`
 - Notion database to local books data: `src/data/books/*.json`
 - Notion database to local projects data: `src/data/projects/projects.json`
+- Notion database to Astro blog entries: `src/content/blog/**/notion-*.md`
 - Notion database to Astro diary entries: `src/content/diary/notion-*.md`
 
 ## Source of truth
@@ -97,6 +98,39 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
 - Allowed link types:
   - `github`, `site`, `link`, `doc`, `release`
 
+## Notion Blog to Astro Markdown Mapping
+
+### Query behavior
+- Default filter: `show == true` (if `show` property exists)
+- Fallback: if `show` does not exist, query all rows
+- Sort: `created_time` descending
+
+### Property mapping
+- `title`/`name`/`标题` to `title` (required with fallback `Untitled`)
+- `description`/`summary`/`摘要` to `description` (optional)
+- `publishDate`/`date`/`发布时间` to `publishDate` (required)
+- `updated`/`lastEdited`/`更新时间` to `updated` (optional)
+- `tags` (multi-select or rich text) to `tags` (optional, normalized lowercase array)
+- `draft` (checkbox) to `draft` (optional)
+- `show` (checkbox) to publish switch fallback (`draft = !show` when `draft` missing)
+- `language`/`lang` to `language` (optional, default `zh-CN`)
+- `comment` (checkbox) to `comment` (optional)
+
+### Content mapping
+- Notion page blocks are converted to markdown body.
+- Supported common blocks:
+  - paragraph, heading 1/2/3
+  - bulleted/numbered list, todo
+  - quote, code, divider, callout, toggle
+  - image/file/bookmark/embed link output
+- Output file naming:
+  - `src/content/blog/<year>/notion-<pageId12>.md`
+  - stable id-based filename to avoid duplicates on title/date change
+
+### Cleanup strategy
+- `--clean` only removes generated files matching `notion-*.md|mdx` that are no longer in Notion.
+- Manual blog files are preserved.
+
 ## Notion Diary to Astro Markdown Mapping
 
 ### Query behavior
@@ -146,11 +180,13 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
   - `npm run sync:notion:books`
 - Notion projects sync (skip when env missing):
   - `npm run sync:notion:projects`
+- Notion blog sync (skip when env missing):
+  - `npm run sync:notion:blog`
 - Notion diary sync (skip when env missing):
   - `npm run sync:notion:diary`
 - End-to-end Phase C run:
   - `npm run sync:phase-c:full`
-- One-click full sync (with diary cleanup):
+- One-click full sync (with blog/diary cleanup):
   - `npm run sync:all`
 
 ### Optional flags
@@ -160,6 +196,8 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
   - `node scripts/sync/sync-notion-books.js --year current --dry-run`
 - Notion projects:
   - `node scripts/sync/sync-notion-projects.js --dry-run`
+- Notion blog:
+  - `node scripts/sync/sync-notion-blog.js --dry-run --clean`
 - Notion diary:
   - `node scripts/sync/sync-notion-diary.js --dry-run --clean`
 
@@ -170,6 +208,9 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
 - Projects sync:
   - `NOTION_TOKEN`
   - `NOTION_PROJECTS_DATABASE_ID`
+- Blog sync:
+  - `NOTION_TOKEN`
+  - `NOTION_BLOG_DATABASE_ID`
 - Diary sync:
   - `NOTION_TOKEN`
   - `NOTION_DIARY_DATABASE_ID`

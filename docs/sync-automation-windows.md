@@ -13,7 +13,8 @@ This command runs:
 1. Obsidian sync + frontmatter validation
 2. Notion books sync
 3. Notion projects sync
-4. Notion diary sync with `--clean` (remove stale generated `notion-*.md`)
+4. Notion blog sync with `--clean` (remove stale generated `notion-*.md`)
+5. Notion diary sync with `--clean` (remove stale generated `notion-*.md`)
 
 ## Scheduled sync (Task Scheduler)
 
