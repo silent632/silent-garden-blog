@@ -19,14 +19,35 @@ function parseArgs(argv) {
     dryRun: false,
     allowMissingEnv: false,
     clean: false,
-    verbose: false
+    verbose: false,
+    checkOnly: false,
+    strictPublish: false,
+    minBodyChars: 120
   }
 
-  for (const arg of argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index]
     if (arg === '--dry-run') options.dryRun = true
     if (arg === '--allow-missing-env') options.allowMissingEnv = true
     if (arg === '--clean') options.clean = true
     if (arg === '--verbose') options.verbose = true
+    if (arg === '--check-only') options.checkOnly = true
+    if (arg === '--strict-publish') options.strictPublish = true
+    if (arg.startsWith('--min-body-chars=')) {
+      const raw = Number(arg.split('=', 2)[1])
+      if (Number.isFinite(raw) && raw >= 0) options.minBodyChars = Math.floor(raw)
+    }
+    if (arg === '--min-body-chars') {
+      const raw = Number(argv[index + 1])
+      if (Number.isFinite(raw) && raw >= 0) {
+        options.minBodyChars = Math.floor(raw)
+        index += 1
+      }
+    }
+  }
+
+  if (options.checkOnly) {
+    options.dryRun = true
   }
 
   return options
@@ -427,7 +448,8 @@ function parseBlogPage(page, verbose) {
   const titleRaw = truncateText(extractTextValue(titleProperty), 60)
   const title = titleRaw || 'Untitled'
   const description = truncateText(extractTextValue(descProperty), 160)
-  const publishDate = normalizeDate(extractDate(dateProperty), page.created_time)
+  const explicitPublishDate = normalizeDate(extractDate(dateProperty), '')
+  const publishDate = explicitPublishDate || normalizeDate(page.created_time, '')
   const updated = normalizeDate(extractDate(updatedProperty), page.last_edited_time)
   const language = truncateText(extractTextValue(languageProperty), 24) || 'zh-CN'
 
@@ -439,8 +461,8 @@ function parseBlogPage(page, verbose) {
   tags = normalizeTags(tags)
 
   let draft = extractCheckbox(draftProperty)
+  const show = extractCheckbox(showProperty)
   if (draft === null) {
-    const show = extractCheckbox(showProperty)
     draft = show === null ? false : !show
   }
 
@@ -462,7 +484,97 @@ function parseBlogPage(page, verbose) {
     tags,
     draft: Boolean(draft),
     language,
-    comment
+    comment,
+    checklist: {
+      hasExplicitTitle: Boolean(titleRaw),
+      hasDescription: Boolean(description),
+      descriptionLength: description.length,
+      hasExplicitPublishDate: Boolean(explicitPublishDate),
+      hasTags: tags.length > 0,
+      hasShowProperty: Boolean(showProperty),
+      showEnabled: show === true
+    }
+  }
+}
+
+function countBodyChars(markdown) {
+  if (!markdown) return 0
+  const plain = markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/[#>*_\-\[\]()!|]/g, ' ')
+    .replace(/\s+/g, '')
+  return plain.length
+}
+
+function validatePublishChecklist(entry, markdown, options) {
+  const issues = []
+  const checklist = entry.checklist || {}
+
+  if (!checklist.hasShowProperty) {
+    issues.push('missing-show-property')
+  } else if (!checklist.showEnabled) {
+    issues.push('show-not-enabled')
+  }
+
+  if (!checklist.hasExplicitTitle || entry.title === 'Untitled') {
+    issues.push('missing-title')
+  }
+  if (!checklist.hasExplicitPublishDate) {
+    issues.push('missing-publish-date')
+  }
+  if (!checklist.hasDescription) {
+    issues.push('missing-description')
+  } else if (checklist.descriptionLength < 40 || checklist.descriptionLength > 160) {
+    issues.push('description-length-out-of-range')
+  }
+  if (!checklist.hasTags) {
+    issues.push('missing-tags')
+  }
+  if (entry.draft) {
+    issues.push('draft-is-true')
+  }
+
+  const language = String(entry.language || '').toLowerCase()
+  if (language && language !== 'zh-cn' && language !== 'en-us') {
+    issues.push('invalid-language')
+  }
+
+  const bodyChars = countBodyChars(markdown)
+  if (bodyChars < options.minBodyChars) {
+    issues.push(`body-too-short(<${options.minBodyChars})`)
+  }
+
+  return { issues, bodyChars }
+}
+
+function formatChecklistIssue(issueCode) {
+  switch (issueCode) {
+    case 'missing-show-property':
+      return '缺少 show 字段（Checkbox）'
+    case 'show-not-enabled':
+      return 'show 未勾选'
+    case 'missing-title':
+      return 'title 为空'
+    case 'missing-publish-date':
+      return 'publishDate 未填写'
+    case 'missing-description':
+      return 'description 未填写'
+    case 'description-length-out-of-range':
+      return 'description 长度需要在 40-160 字符'
+    case 'missing-tags':
+      return 'tags 未填写'
+    case 'draft-is-true':
+      return 'draft 被勾选'
+    case 'invalid-language':
+      return 'language 仅支持 zh-CN 或 en-US'
+    default:
+      if (issueCode.startsWith('body-too-short')) {
+        return `正文内容过短，未达到最小字符数要求（${issueCode.slice('body-too-short'.length)})`
+      }
+      return issueCode
   }
 }
 
@@ -561,13 +673,16 @@ async function run() {
   }
 
   const pages = await queryAllPages(token, databaseId, options.verbose)
-  const targetRoot = ensureBlogDir(projectRoot, options.dryRun)
+  const writeEnabled = !options.dryRun && !options.checkOnly
+  const targetRoot = ensureBlogDir(projectRoot, !writeEnabled)
   const seenFiles = new Set()
 
+  let checked = 0
   let created = 0
   let updated = 0
   let unchanged = 0
   let skipped = 0
+  const failedChecklist = []
 
   for (const page of pages) {
     const entry = parseBlogPage(page, options.verbose)
@@ -578,8 +693,29 @@ async function run() {
 
     const blocks = await fetchBlockChildren(token, page.id)
     const markdown = await blocksToMarkdown(token, blocks)
+    const { issues, bodyChars } = validatePublishChecklist(entry, markdown, options)
+    checked += 1
+
+    if (issues.length > 0) {
+      const issueText = issues.map((item) => formatChecklistIssue(item)).join('; ')
+      if (options.strictPublish) {
+        failedChecklist.push({
+          id: entry.id,
+          title: entry.title,
+          issues,
+          issueText,
+          bodyChars
+        })
+        skipped += 1
+        continue
+      }
+      if (options.verbose) {
+        console.warn(`[sync:notion:blog] Checklist warning page=${entry.id} "${entry.title}": ${issueText}`)
+      }
+    }
+
     const nextText = buildBlogDocument(entry, markdown)
-    const yearDir = ensureBlogYearDir(targetRoot, blogYearFromDate(entry.publishDate), options.dryRun)
+    const yearDir = ensureBlogYearDir(targetRoot, blogYearFromDate(entry.publishDate), !writeEnabled)
     const filePath = path.join(yearDir, notionBlogFileName(entry.id))
 
     seenFiles.add(filePath)
@@ -590,19 +726,27 @@ async function run() {
         unchanged += 1
         continue
       }
-      if (!options.dryRun) writeFileSync(filePath, nextText, 'utf8')
+      if (writeEnabled) writeFileSync(filePath, nextText, 'utf8')
       updated += 1
       continue
     }
 
-    if (!options.dryRun) writeFileSync(filePath, nextText, 'utf8')
+    if (writeEnabled) writeFileSync(filePath, nextText, 'utf8')
     created += 1
   }
 
-  const deleted = options.clean ? pruneRemovedFiles(targetRoot, seenFiles, options.dryRun) : 0
-  const mode = options.dryRun ? 'would write' : 'wrote'
+  if (options.strictPublish && failedChecklist.length > 0) {
+    console.error(`[sync:notion:blog] Checklist failed for ${failedChecklist.length} page(s):`)
+    for (const item of failedChecklist) {
+      console.error(`  - ${item.title} (${item.id}): ${item.issueText}; bodyChars=${item.bodyChars}`)
+    }
+    return 2
+  }
+
+  const deleted = options.clean && !options.checkOnly ? pruneRemovedFiles(targetRoot, seenFiles, !writeEnabled) : 0
+  const mode = options.checkOnly ? 'checked' : options.dryRun ? 'would write' : 'wrote'
   console.log(
-    `[sync:notion:blog] ${mode} files created=${created} updated=${updated} unchanged=${unchanged} skipped=${skipped} deleted=${deleted}`
+    `[sync:notion:blog] ${mode} files checked=${checked} created=${created} updated=${updated} unchanged=${unchanged} skipped=${skipped} deleted=${deleted}`
   )
 
   return 0

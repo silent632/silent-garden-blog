@@ -40,6 +40,7 @@ jobs:
         run: |
           npm run sync:notion:books
           npm run sync:notion:projects
+          npm run sync:notion:blog:check
           npm run sync:notion:blog -- --clean
           npm run sync:notion:diary -- --clean
 

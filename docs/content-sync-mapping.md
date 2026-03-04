@@ -131,6 +131,22 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
 - `--clean` only removes generated files matching `notion-*.md|mdx` that are no longer in Notion.
 - Manual blog files are preserved.
 
+### Publish checklist gate (strict mode)
+- Command:
+  - `npm run sync:notion:blog:check`
+- Behavior:
+  - query published rows (`show == true`) and run checklist before write
+  - fail process when any row violates checklist
+- Checklist items:
+  - `show` exists and is checked
+  - `title` must not be empty
+  - `publishDate` must be explicitly filled
+  - `description` required and length in `40-160`
+  - `tags` required (at least 1)
+  - `draft` must be false
+  - `language` must be `zh-CN` or `en-US`
+  - body text length must be at least 120 chars (configurable by `--min-body-chars`)
+
 ## Notion Diary to Astro Markdown Mapping
 
 ### Query behavior
@@ -182,6 +198,8 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
   - `npm run sync:notion:projects`
 - Notion blog sync (skip when env missing):
   - `npm run sync:notion:blog`
+- Notion blog publish checklist (blocking):
+  - `npm run sync:notion:blog:check`
 - Notion diary sync (skip when env missing):
   - `npm run sync:notion:diary`
 - End-to-end Phase C run:
@@ -198,6 +216,7 @@ Current rendering stays in `src/pages/projects/index.astro`; sync only updates d
   - `node scripts/sync/sync-notion-projects.js --dry-run`
 - Notion blog:
   - `node scripts/sync/sync-notion-blog.js --dry-run --clean`
+  - `node scripts/sync/sync-notion-blog.js --check-only --strict-publish --min-body-chars 120`
 - Notion diary:
   - `node scripts/sync/sync-notion-diary.js --dry-run --clean`
 

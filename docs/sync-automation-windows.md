@@ -13,8 +13,9 @@ This command runs:
 1. Obsidian sync + frontmatter validation
 2. Notion books sync
 3. Notion projects sync
-4. Notion blog sync with `--clean` (remove stale generated `notion-*.md`)
-5. Notion diary sync with `--clean` (remove stale generated `notion-*.md`)
+4. Notion blog publish checklist gate (`sync:notion:blog:check`, blocking on invalid rows)
+5. Notion blog sync with `--clean` (remove stale generated `notion-*.md`)
+6. Notion diary sync with `--clean` (remove stale generated `notion-*.md`)
 
 ## Scheduled sync (Task Scheduler)
 
@@ -49,4 +50,3 @@ Task script writes logs to:
 ```text
 .codex/sync-logs/sync-all-YYYYMMDD-HHMMSS.log
 ```
-
