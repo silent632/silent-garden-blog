@@ -1,6 +1,7 @@
 ﻿---
 import PageLayout from '@/layouts/CommonPage.astro'
 import ProjectSection from '@/components/projects/ProjectSection.astro'
+import { theme } from '../../site.config'
 import syncedProjects from '../../data/projects/projects.json'
 
 const headings = [
@@ -9,6 +10,25 @@ const headings = [
 ]
 
 const projectList = Array.isArray(syncedProjects) ? syncedProjects : []
+
+function resolveGithubUsername(input: string) {
+  const raw = input.trim()
+  if (!raw) return ''
+  if (!raw.includes('github.com')) return raw.replace(/^@/, '')
+  try {
+    const parsed = new URL(raw)
+    const [firstSegment = ''] = parsed.pathname.split('/').filter(Boolean)
+    return firstSegment.replace(/^@/, '')
+  } catch {
+    return raw.replace(/^https?:\/\/(www\.)?github\.com\//, '').split('/')[0]?.replace(/^@/, '') || ''
+  }
+}
+
+const githubProfileUrl = theme.footer?.social?.github || ''
+const githubUsername = resolveGithubUsername(githubProfileUrl)
+const githubChartUrl = githubUsername
+  ? `https://ghchart.rshah.org/40814F/${githubUsername}`
+  : ''
 ---
 
 <PageLayout
@@ -20,9 +40,15 @@ const projectList = Array.isArray(syncedProjects) ? syncedProjects : []
   }}
 >
   <p>GitHub Activity:</p>
-  <p>
-    <img src='https://ghchart.rshah.org/40814F/silent632' alt='github activities' loading='lazy' />
-  </p>
+  {githubChartUrl ? (
+    <p>
+      <a href={githubProfileUrl || `https://github.com/${githubUsername}`} target='_blank' rel='noreferrer'>
+        <img src={githubChartUrl} alt={`${githubUsername} github activities`} loading='lazy' />
+      </a>
+    </p>
+  ) : (
+    <p class='text-muted-foreground'>GitHub account is not configured yet.</p>
+  )}
   <p>A collection of my projects.</p>
 
   <h2 id='my-projects'>Project List</h2>
