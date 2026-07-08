@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = 'https://silent-garden.pages.dev'
+const DEFAULT_SITE_URL = 'https://silent-garden-blog.pages.dev'
 
 export const DEFAULT_SOCIAL_IMAGE = '/images/wormhole.png'
 
