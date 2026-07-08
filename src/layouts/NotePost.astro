@@ -10,6 +10,7 @@ import { Icon } from 'astro-pure/user'
 import BaseLayout from '@/layouts/BaseLayout.astro'
 import { integ } from '@/site-config'
 import { processTags } from '@/utils/formatTag'
+import { DEFAULT_SOCIAL_IMAGE } from '@/utils/site'
 
 interface Props {
   post: CollectionEntry<'notes'>
@@ -44,7 +45,7 @@ const socialImage = heroImage
   ? typeof heroImage.src === 'string'
     ? heroImage.src
     : heroImage.src.src
-  : '/images/social-card.png'
+  : DEFAULT_SOCIAL_IMAGE
 const articleDate = updated?.toISOString() ?? publishDate?.toISOString() ?? new Date().toISOString()
 const metaTitle = fileName || 'Note'
 ---

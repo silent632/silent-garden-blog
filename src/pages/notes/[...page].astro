@@ -4,6 +4,7 @@ import { getBlogCollection } from 'astro-pure/server'
 import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import NotePreview from '@/components/note/NotePreview.astro'
+import { paginateCollection } from '@/utils/contentRouting.mjs'
 
 export const prerender = true
 
@@ -16,34 +17,8 @@ export async function getStaticPaths() {
   const collections = (await getBlogCollection('notes')) as CollectionEntry<'notes'>[]
   collections.sort((a, b) => getDateValue(b) - getDateValue(a))
 
-  const collectionsCount = collections.length
-  const page1Size = 66
-  const page2Size = 78
-
-  let totalPages = 1
-  if (collectionsCount > page1Size) {
-    totalPages++
-    if (collectionsCount > page1Size + page2Size) {
-      totalPages++
-    }
-  }
-
-  const paths = []
-  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-    let pageSize = 78
-    let startIndex = 0
-
-    if (pageNum === 1) {
-      pageSize = page1Size
-    } else if (pageNum === 2) {
-      startIndex = page1Size
-    } else if (pageNum === 3) {
-      startIndex = page1Size + page2Size
-    }
-
-    const pageData = collections.slice(startIndex, startIndex + pageSize)
-
-    paths.push({
+  return paginateCollection(collections, 60).map(
+    ({ pageData, pageNum, totalPages, collectionsCount }) => ({
       params: { page: pageNum === 1 ? undefined : String(pageNum) },
       props: {
         pageData,
@@ -52,9 +27,7 @@ export async function getStaticPaths() {
         collectionsCount
       }
     })
-  }
-
-  return paths
+  )
 }
 
 interface Props {

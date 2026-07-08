@@ -36,7 +36,7 @@ const remarkHighlight: Plugin<[], Root> = () => {
           data: {
             hName: 'mark',
             hProperties: {
-              style: 'background-color: #F3D94D'
+              className: 'md-highlight'
             }
           },
           children: [{

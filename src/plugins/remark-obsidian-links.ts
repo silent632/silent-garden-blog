@@ -1,10 +1,11 @@
 import type { Text } from 'mdast'
 import { visit } from 'unist-util-visit'
+import { buildInternalContentUrl } from '../utils/contentRouting.mjs'
 
 /**
  * Remark插件：处理Obsidian链接格式 [[文件名|别名]] 和 ![[文件名]]
- * 转换为标准Markdown链接 [别名](https://example.com/type/year/文件名)
- * 同时清理已存在的Markdown链接中的文件夹路径
+ * 转换为站内相对链接 [别名](/type/year/文件名)
+ * 同时清理已存在的Markdown链接中的文件夹路径和绝对域名
  */
 const remarkObsidianLinks = () => {
   return (tree: any) => {
@@ -49,10 +50,10 @@ const remarkObsidianLinks = () => {
         try {
           // 从文件名和路径中提取信息
           let type = 'notes'
-          let year = '2025'
+          let year = String(new Date().getFullYear())
           
           // 确保清理文件名，去掉所有路径信息
-          let cleanFileName = cleanUpFileName(fileName)
+          const cleanFileName = cleanUpFileName(fileName)
           
           // 提取年份
           year = extractYear(fileName)
@@ -65,7 +66,7 @@ const remarkObsidianLinks = () => {
           }
           
           // 构建目标URL
-          const targetUrl = `https://example.com/${type}/${year}/${encodeURIComponent(cleanFileName)}`
+          const targetUrl = buildInternalContentUrl(type, year, cleanFileName)
           
           // 创建相应的节点
           if (isImageLink) {
@@ -111,23 +112,41 @@ const remarkObsidianLinks = () => {
 
     // 处理已存在的Markdown链接，清理文件夹路径
     visit(tree, 'link', (node: any) => {
-      if (node.url && node.url.includes('example.com/notes/')) {
-        const urlParts = node.url.split('/')
-        const noteIndex = urlParts.indexOf('notes')
-        
-        if (noteIndex !== -1 && noteIndex + 2 < urlParts.length) {
-          const year = urlParts[noteIndex + 1]
-          const filenameWithPath = urlParts.slice(noteIndex + 2).join('/')
-          const cleanFileName = cleanUpFileName(filenameWithPath)
-          
-          const cleanUrl = `https://example.com/notes/${year}/${encodeURIComponent(cleanFileName)}`
-          
-          if (cleanUrl !== node.url) {
-            node.url = cleanUrl
-          }
-        }
+      const parsedLink = parseInternalContentLink(node.url)
+      if (parsedLink) {
+        node.url = buildInternalContentUrl(
+          parsedLink.type,
+          parsedLink.year,
+          cleanUpFileName(parsedLink.fileName)
+        )
       }
     })
+  }
+}
+
+function parseInternalContentLink(rawUrl: string): { type: string; year: string; fileName: string } | null {
+  if (!rawUrl) return null
+
+  try {
+    const url = rawUrl.startsWith('/')
+      ? new URL(`https://placeholder.local${rawUrl}`)
+      : new URL(rawUrl)
+    const parts = url.pathname.split('/').filter(Boolean)
+
+    if (parts.length < 3) return null
+
+    const [type, year, ...fileParts] = parts
+    if (!['blog', 'notes', 'diary'].includes(type) || !/^\d{4}$/.test(year)) {
+      return null
+    }
+
+    return {
+      type,
+      year,
+      fileName: decodeURIComponent(fileParts.join('/'))
+    }
+  } catch {
+    return null
   }
 }
 
@@ -169,25 +188,14 @@ function cleanUpFileName(fileName: string): string {
 }
 
 /**
- * 从文件名或路径中提取年份，默认为2025
+ * 从文件名或路径中提取年份，默认为当前年份
  */
 function extractYear(fileName: string): string {
-  // 默认年份
-  let year = '2025'
-  
-  // 检查第一部分是否为年份（4位数字）
   const pathParts = fileName.split('/')
   if (pathParts.length > 0 && /^\d{4}$/.test(pathParts[0])) {
-    year = pathParts[0]
+    return pathParts[0]
   }
-  
-  // 还检查路径中是否有4位数字
-  const yearMatch = fileName.match(/(\d{4})/)
-  if (yearMatch) {
-    year = yearMatch[1]
-  }
-  
-  return year
+  return String(new Date().getFullYear())
 }
 
 export default remarkObsidianLinks

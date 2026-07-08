@@ -1,17 +1,19 @@
 ---
 // import { ClientRouter } from 'astro:transitions'
 
-import { prod } from 'astro-pure/server'
 import type { SiteMeta } from 'astro-pure/types'
 import config from '@/site-config'
+import { DEFAULT_SOCIAL_IMAGE } from '@/utils/site'
 
 type Props = SiteMeta
 
 const { articleDate, description, ogImage, title } = Astro.props
 
 const siteTitle = `${title} ${config.titleDelimiter} ${config.title}`
-const canonicalURL = new URL(Astro.url.pathname, Astro.site)
-const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', Astro.url).href
+const baseUrl = Astro.site ?? Astro.url
+const canonicalURL = new URL(Astro.url.pathname, baseUrl)
+const socialImageURL = new URL(ogImage || DEFAULT_SOCIAL_IMAGE, baseUrl).href
+const rssUrl = new URL('/rss.xml', baseUrl).href
 ---
 
 <meta charset='utf-8' />
@@ -34,7 +36,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 <meta content={config.author} name='author' />
 
 {/* Theme Color */}
-<meta content='' name='theme-color' />
+<meta content='#64879A' name='theme-color' />
 
 {/* Open Graph / Facebook */}
 <meta content={articleDate ? 'article' : 'website'} property='og:type' />
@@ -70,7 +72,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
   rel='alternate'
   type='application/rss+xml'
   title={config.title}
-  href={`${Astro.site}rss.xml`}
+  href={rssUrl}
 />
 
 <meta content={Astro.generator} name='generator' />
@@ -91,11 +93,3 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
   })
 </script> -->
 
-{  
-  /* User script - removed console.log debug output */
-  prod && (
-    <script>
-      // Theme branding (no console output)
-    </script>
-  )
-}

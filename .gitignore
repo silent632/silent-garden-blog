@@ -63,5 +63,8 @@ coverage/
 .wrangler/
 
 # Project specific
+.codex/sync-logs/
+.obsidian/
+.tools/
 .qoder/
 .qwen/

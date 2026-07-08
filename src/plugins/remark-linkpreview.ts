@@ -23,26 +23,6 @@ function extractUrl(text: string): string | null {
 }
 
 /**
- * 修复豆瓣图片链接的爬取问题
- */
-async function fixDoubanImage(meta: any, url: string): Promise<any> {
-  if (meta && url) {
-    // 检查是否是豆瓣链接
-    if (url.includes('douban.com')) {
-      try {
-        // 这里我们使用原始的meta对象，但在实际使用时可能需要重新请求页面来获取图片
-        // 为了简化示例，我们假设parseOpenGraph已经获取了基本信息
-        // 在实际应用中，这里可能需要添加更复杂的逻辑来处理豆瓣链接
-        return meta
-      } catch (e) {
-        console.error('Failed to fix Douban image:', e)
-      }
-    }
-  }
-  return meta
-}
-
-/**
  * Remark插件：支持Markdown中使用```linkpreview代码块来显示链接预览
  */
 const remarkLinkpreview: Plugin<[], Root> = () => {
@@ -78,12 +58,8 @@ const remarkLinkpreview: Plugin<[], Root> = () => {
     // 第二步：异步处理每个链接预览
     for (const { index, parent, hideMedia, url } of linkPreviews) {
       try {
-        // 获取OpenGraph数据
-        let meta = await parseOpenGraph(url)
-        
-        // 修复豆瓣图片问题
-        meta = await fixDoubanImage(meta, url)
-        
+        const meta = await parseOpenGraph(url)
+
         if (meta && meta.title) {
           const domain = meta?.url ? new URL(meta.url).hostname.replace('www.', '') : ''
           

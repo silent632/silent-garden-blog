@@ -11,11 +11,22 @@ import { visit } from 'unist-util-visit'
 import config from 'virtual:config'
 
 import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import { DEFAULT_SOCIAL_IMAGE, getSiteUrlOrFallback } from '@/utils/site'
 
 // Get dynamic import of images as a map collection
 const imagesGlob = import.meta.glob<{ default: ImageMetadata }>(
-  '/src/content/blog/**/*.{jpeg,jpg,png,gif,avif.webp}' // add more image formats if needed
+  '/src/content/blog/**/*.{jpeg,jpg,png,gif,avif,webp}' // add more image formats if needed
 )
+
+const resolveFeedImage = (post: CollectionEntry<'blog'>, site: URL) => {
+  const src = post.data.heroImage
+    ? typeof post.data.heroImage.src === 'string'
+      ? post.data.heroImage.src
+      : post.data.heroImage.src.src
+    : DEFAULT_SOCIAL_IMAGE
+
+  return new URL(src, site).toString()
+}
 
 const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
   // Replace image links with the correct path
@@ -55,7 +66,7 @@ const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
 
 const GET = async (context: AstroGlobal) => {
   const allPostsByDate = sortMDByDate(await getBlogCollection()) as CollectionEntry<'blog'>[]
-  const siteUrl = context.site ?? new URL(import.meta.env.SITE)
+  const siteUrl = context.site ?? new URL(getSiteUrlOrFallback())
 
   return rss({
     // Basic configs
@@ -66,16 +77,20 @@ const GET = async (context: AstroGlobal) => {
     // Contents
     title: config.title,
     description: config.description,
-    site: import.meta.env.SITE,
+    site: siteUrl.toString(),
     items: await Promise.all(
-      allPostsByDate.map(async (post) => ({
-        pubDate: post.data.publishDate,
-        link: `/blog/${post.id}`,
-        customData: `<h:img src="${typeof post.data.heroImage?.src === 'string' ? post.data.heroImage?.src : post.data.heroImage?.src.src}" />
-          <enclosure url="${typeof post.data.heroImage?.src === 'string' ? post.data.heroImage?.src : post.data.heroImage?.src.src}" />`,
-        content: await renderContent(post, siteUrl),
-        ...post.data
-      }))
+      allPostsByDate.map(async (post) => {
+        const imageUrl = resolveFeedImage(post, siteUrl)
+
+        return {
+          pubDate: post.data.publishDate,
+          link: `/blog/${post.id}`,
+          customData: `<h:img src="${imageUrl}" />
+          <enclosure url="${imageUrl}" />`,
+          content: await renderContent(post, siteUrl),
+          ...post.data
+        }
+      })
     )
   })
 }

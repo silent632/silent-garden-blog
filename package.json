@@ -17,6 +17,7 @@
     "lint": "eslint --fix 'src/**/*.{js,ts,jsx,tsx,astro}'",
     "yijiansilian": "bun lint && bun sync && bun check && bun format",
     "clean": "rm -rf .astro dist",
+    "test:content-routing": "node --test scripts/tests/content-routing.test.mjs",
     "generate-books": "npx tsx scripts/generate-books-json.ts",
     "sync:validate": "node scripts/sync/validate-frontmatter.js",
     "sync:obsidian": "node scripts/sync/sync-obsidian.js",
@@ -27,7 +28,9 @@
     "sync:notion:diary": "node scripts/sync/sync-notion-diary.js --allow-missing-env",
     "sync:phase-c": "npm run sync:obsidian && npm run sync:validate",
     "sync:phase-c:full": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:blog && npm run sync:notion:diary",
-    "sync:all": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:blog:check && npm run sync:notion:blog -- --clean && npm run sync:notion:diary -- --clean"
+    "sync:all": "npm run sync:phase-c && npm run sync:notion:books && npm run sync:notion:projects && npm run sync:notion:blog:check && npm run sync:notion:blog -- --clean && npm run sync:notion:diary -- --clean",
+    "sync:auto:push": "bash scripts/macos/run-sync-and-push.sh",
+    "sync:auto:install:macos": "bash scripts/macos/install-sync-launchagent.sh"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",

@@ -16,6 +16,7 @@ Phase B defines a stable data contract for content synchronization without chang
 - Human-readable mapping: this document
 - Machine-readable mapping: `scripts/sync/contracts.js`
 - Gate validation script: `scripts/sync/validate-frontmatter.js`
+- Rendering source: Astro pages read synced local Markdown/JSON files. Notion API access should stay in sync scripts, not page rendering.
 
 ## Current content snapshot
 - `blog`: 3 markdown files detected in `src/content/blog`

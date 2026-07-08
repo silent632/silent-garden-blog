@@ -20,9 +20,12 @@ import {
   updateStyle
 } from './src/plugins/shiki-transformers.ts'
 import config from './src/site.config.ts'
+import { getSiteUrlOrFallback } from './src/utils/site.ts'
+
+const siteUrl = getSiteUrlOrFallback()
 
 export default defineConfig({
-  site: process.env.SITE_URL || 'https://example.com',
+  site: siteUrl,
   trailingSlash: 'never',
 
   // adapter: cloudflare(),
@@ -75,5 +78,4 @@ export default defineConfig({
     }
   }
 })
-
 

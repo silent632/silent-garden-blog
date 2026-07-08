@@ -16,6 +16,7 @@ const headings = [
 
 const { friends } = links
 const linksConf = config.integ.links
+const applyTipItems = linksConf.applyTip.filter(({ val }) => String(val || '').trim())
 ---
 
 <PageLayout title='About' {headings} info='/about'>
@@ -32,7 +33,9 @@ const linksConf = config.integ.links
 
   <h2 id='hobbies'>Hobbies</h2>
   <ul>
-    <li>Add your hobbies here...</li>
+    <li>Reading, writing, and long-term personal knowledge management.</li>
+    <li>Building small tools that make daily work quieter and more reliable.</li>
+    <li>Recording how ideas, books, and projects compound over time.</li>
   </ul>
 
   <h2 id='links'>Links</h2>
@@ -42,22 +45,27 @@ const linksConf = config.integ.links
 
   <!-- apply-links -->
   <p>Apply for link exchange:</p>
-  <p>Site profile (click to copy):</p>
-  <blockquote class='not-prose grid grid-cols-[auto_1fr] gap-x-2 break-words border-s-4 ps-4'>
-    {
-      linksConf.applyTip.map(({ name, val }) => {
-        const script = `navigator.clipboard.writeText('${val}');document.dispatchEvent(new CustomEvent('toast',{detail:{message:'Copied "${val}"'}}))`
-        return (
-          <>
-            <span class='text-end'>{name}:</span>
-            <samp class='cursor-pointer' onclick={script}>
-              {val}
-            </samp>
-          </>
-        )
-      })
-    }
-  </blockquote>
+  {
+    applyTipItems.length > 0 ? (
+      <>
+        <p>Site profile (click to copy):</p>
+        <blockquote class='not-prose grid grid-cols-[auto_1fr] gap-x-2 break-words border-s-4 ps-4'>
+          {
+            applyTipItems.map(({ name, val }) => (
+              <>
+                <span class='text-end'>{name}:</span>
+                <samp class='cursor-pointer' data-copy-value={val}>
+                  {val}
+                </samp>
+              </>
+            ))
+          }
+        </blockquote>
+      </>
+    ) : (
+      <p class='text-muted-foreground'>Set `SITE_URL` to publish the site profile for link exchange.</p>
+    )
+  }
 
   <br />
 
@@ -72,7 +80,7 @@ const linksConf = config.integ.links
 
   <h2 id='about-blog'>About this blog</h2>
   <p>
-    Built with Astro + Pure Theme, with thanks to the open-source community.<br />
+    Built with Astro and the Pure theme, with content synced from local writing workflows.<br />
     Keep recording, keep compounding.
   </p>
 
@@ -82,3 +90,15 @@ const linksConf = config.integ.links
 
   <Comment slot='bottom' />
 </PageLayout>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-copy-value]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const value = el.getAttribute('data-copy-value') || ''
+      navigator.clipboard.writeText(value)
+      document.dispatchEvent(
+        new CustomEvent('toast', { detail: { message: `Copied "${value}"` } })
+      )
+    })
+  })
+</script>

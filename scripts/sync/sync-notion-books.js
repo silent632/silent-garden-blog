@@ -8,6 +8,24 @@ import {
 } from './contracts.js'
 
 const NOTION_API_VERSION = '2022-06-28'
+const RETRYABLE_ERROR_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN'])
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRetryableFetchError(error) {
+  const message = error instanceof Error ? error.message : String(error)
+  const causeCode = error && typeof error === 'object' ? error.cause?.code : undefined
+  return (
+    message.includes('fetch failed') ||
+    message.includes('ECONNRESET') ||
+    message.includes('ETIMEDOUT') ||
+    message.includes('ENOTFOUND') ||
+    message.includes('EAI_AGAIN') ||
+    RETRYABLE_ERROR_CODES.has(causeCode)
+  )
+}
 
 function parseArgs(argv) {
   const options = {
@@ -85,21 +103,38 @@ function isPlaceholderValue(value) {
 }
 
 async function notionApiCall(token, endpoint, method = 'GET', body = undefined) {
-  const response = await fetch(`https://api.notion.com/v1${endpoint}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Notion-Version': NOTION_API_VERSION
-    },
-    body: body ? JSON.stringify(body) : undefined
-  })
+  const maxAttempts = 3
 
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`Notion API ${response.status}: ${text}`)
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(`https://api.notion.com/v1${endpoint}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': NOTION_API_VERSION
+        },
+        body: body ? JSON.stringify(body) : undefined
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        const error = new Error(`Notion API ${response.status}: ${text}`)
+        if (attempt < maxAttempts && (response.status >= 500 || response.status === 429)) {
+          await sleep(300 * attempt)
+          continue
+        }
+        throw error
+      }
+
+      return response.json()
+    } catch (error) {
+      if (attempt >= maxAttempts || !isRetryableFetchError(error)) {
+        throw error
+      }
+      await sleep(300 * attempt)
+    }
   }
-  return response.json()
 }
 
 function extractTitle(property) {

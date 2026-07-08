@@ -1,4 +1,8 @@
 ﻿import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types'
+import { buildAbsoluteUrl, getSiteUrlFromEnv } from './utils/site'
+
+const siteUrl = getSiteUrlFromEnv()
+const walineServerUrl = String(process.env.WALINE_SERVER_URL || '').trim()
 
 export const theme: ThemeUserConfig = {
   // === Basic configuration ===
@@ -88,8 +92,12 @@ export const integ: IntegrationUserConfig = {
     applyTip: [
       { name: 'Name', val: 'Silent Garden' },
       { name: 'Description', val: 'Long-termism' },
-      { name: 'Link', val: 'https://example.com' },
-      { name: 'Icon', val: 'https://example.com/favicon/favicon.ico' }
+      ...(siteUrl
+        ? [
+            { name: 'Link', val: siteUrl },
+            { name: 'Icon', val: buildAbsoluteUrl('/favicon/favicon.ico', siteUrl) }
+          ]
+        : [])
     ]
   },
 
@@ -114,7 +122,7 @@ export const integ: IntegrationUserConfig = {
 
   waline: {
     enable: false,
-    server: 'https://comment.example.com/', // TODO: 域名确定后替换
+    server: walineServerUrl,
     emoji: ['bmoji', 'weibo'],
     additionalConfigs: {
       search: true,

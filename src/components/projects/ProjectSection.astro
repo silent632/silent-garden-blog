@@ -22,7 +22,7 @@ interface Props {
 }
 const { class: className, projects, ...props } = Astro.props
 const images = import.meta.glob<{ default: ImageMetadata }>(
-  '/src/assets/projects/*.{jpeg,jpg,png,gif,avif.webp,webp}'
+  '/src/assets/projects/*.{jpeg,jpg,png,gif,avif,webp}'
 )
 const projectIconSet: Record<string, iconsType> = {
   github: 'github-circle',
@@ -42,7 +42,7 @@ const projectIconSet: Record<string, iconsType> = {
           imagePath = '/src/assets/projects/' + project.image
           if (!images[imagePath])
             throw new Error(
-              `"${imagePath}" does not exist in glob: "src/assets/projects/*.{jpeg,jpg,png,gif,avif.webp}"`
+              `"${imagePath}" does not exist in glob: "src/assets/projects/*.{jpeg,jpg,png,gif,avif,webp}"`
             )
         }
 

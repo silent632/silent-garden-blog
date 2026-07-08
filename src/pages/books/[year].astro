@@ -1,19 +1,12 @@
 ﻿---
 import PageLayout from '@/layouts/BaseLayout.astro'
 import BookList from '@/components/book/booklist.astro'
-import { getBooksFromNotion, setNotionEnv, type YearData } from '@/utils/notion'
+import { getBooksFromLocalJson, type YearData } from '@/utils/notion'
 import { type Book } from '@/utils/getBookCover'
 import { sortBooksByDate } from '@/utils/sortBooks'
 
-const NOTION_TOKEN = import.meta.env.NOTION_TOKEN
-const NOTION_DATABASE_ID = import.meta.env.NOTION_DATABASE_ID
-
-if (NOTION_TOKEN && NOTION_DATABASE_ID) {
-  setNotionEnv(NOTION_TOKEN, NOTION_DATABASE_ID)
-}
-
 export async function getStaticPaths() {
-  const booksData = await getBooksFromNotion()
+  const booksData = await getBooksFromLocalJson()
   return booksData.years.map((yearData: YearData) => ({
     params: { year: yearData.year.toString() }
   }))
@@ -27,7 +20,7 @@ let recommendedBooks: Book[] = []
 let previousYears: YearData[] = []
 
 try {
-  const booksData = await getBooksFromNotion()
+  const booksData = await getBooksFromLocalJson()
 
   previousYears = booksData.years
 

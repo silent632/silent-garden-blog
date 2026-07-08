@@ -6,6 +6,7 @@ import { Button, Icon } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import { integ } from '@/site-config'
+import { DEFAULT_SOCIAL_IMAGE } from '@/utils/site'
 
 type Props = MarkdownLayoutProps<{
   title: string
@@ -19,7 +20,7 @@ type Props = MarkdownLayoutProps<{
 
 const { frontmatter, headings } = Astro.props
 const { title, description, heroImage, language, back } = frontmatter
-const socialImage = heroImage?.src ?? '/images/social-card.png'
+const socialImage = heroImage?.src ?? DEFAULT_SOCIAL_IMAGE
 ---
 
 <PageLayout meta={{ title, description, ogImage: socialImage }}>
@@ -74,4 +75,3 @@ const socialImage = heroImage?.src ?? '/images/social-card.png'
 
   <BackToTop header='content-header' content='content' />
 </PageLayout>
-

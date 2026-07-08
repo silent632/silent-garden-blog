@@ -39,3 +39,15 @@ samp {
   font-size: 1rem !important;
   line-height: 1.5;
 }
+
+mark.md-highlight {
+  background-color: #F3D94D;
+  color: #1a1a1a;
+  padding: 0.1em 0.2em;
+  border-radius: 0.15em;
+}
+
+.dark mark.md-highlight {
+  background-color: #b8960a;
+  color: #f0f0f0;
+}
